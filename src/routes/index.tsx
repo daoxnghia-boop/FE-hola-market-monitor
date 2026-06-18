@@ -58,7 +58,7 @@ function HomePage() {
 
       {/* Search bar overlapping hero */}
       <div className="-mt-10 px-4 md:-mt-12">
-        <SearchBar className="mx-auto max-w-2xl shadow-pop" />
+        <SearchBar to="/search" className="mx-auto max-w-2xl shadow-pop" />
       </div>
 
       {/* Categories */}
