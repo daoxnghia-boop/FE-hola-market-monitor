@@ -3,13 +3,21 @@ import { Home, Search, ShoppingBag, Receipt, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCartCount } from "@/lib/cart-store";
 
-const items = [
-  { to: "/", label: "Trang chủ", icon: Home, match: (p: string) => p === "/" },
-  { to: "/search", label: "Tìm kiếm", icon: Search, match: (p: string) => p.startsWith("/search") },
-  { to: "/cart", label: "Giỏ hàng", icon: ShoppingBag, match: (p: string) => p.startsWith("/cart"), badge: true },
-  { to: "/orders", label: "Đơn hàng", icon: Receipt, match: (p: string) => p.startsWith("/orders") },
-  { to: "/account", label: "Tài khoản", icon: User, match: (p: string) => p.startsWith("/account") },
-] as const;
+type NavItem = {
+  to: string;
+  label: string;
+  icon: typeof Home;
+  match: (p: string) => boolean;
+  badge?: boolean;
+};
+
+const items: NavItem[] = [
+  { to: "/", label: "Trang chủ", icon: Home, match: (p) => p === "/" },
+  { to: "/search", label: "Tìm kiếm", icon: Search, match: (p) => p.startsWith("/search") },
+  { to: "/cart", label: "Giỏ hàng", icon: ShoppingBag, match: (p) => p.startsWith("/cart"), badge: true },
+  { to: "/orders", label: "Đơn hàng", icon: Receipt, match: (p) => p.startsWith("/orders") },
+  { to: "/account", label: "Tài khoản", icon: User, match: (p) => p.startsWith("/account") },
+];
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
