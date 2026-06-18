@@ -45,8 +45,7 @@ function SearchPage() {
   const showProducts = tab === "all" || tab === "products";
   const isEmpty = ql && matchedShops.length === 0 && matchedProducts.length === 0;
 
-  const onSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitSearch = () => {
     navigate({ search: { q: q.trim() }, replace: true });
   };
 
@@ -54,14 +53,15 @@ function SearchPage() {
     <AppShell>
       <div className="space-y-4 px-4 pt-4 pb-8">
         <h1 className="text-2xl font-extrabold">Tìm món, tìm quán</h1>
-        <form onSubmit={onSubmit}>
-          <SearchBar
-            autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Tìm món hoặc quán (vd: cơm gà, trà sữa)..."
-          />
-        </form>
+        <SearchBar
+          autoFocus
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submitSearch();
+          }}
+          placeholder="Tìm món hoặc quán (vd: cơm gà, trà sữa)..."
+        />
 
         {/* Tabs */}
         <div className="flex gap-2">

@@ -15,6 +15,7 @@ type CartState = {
 const STORAGE_KEY = "hoalac_cart_v1";
 
 let state: CartState = { items: [], shopId: null };
+const serverSnapshot: CartState = { items: [], shopId: null };
 const listeners = new Set<() => void>();
 
 function load() {
@@ -77,7 +78,7 @@ export const cartStore = {
 };
 
 function getServerSnapshot(): CartState {
-  return { items: [], shopId: null };
+  return serverSnapshot;
 }
 
 export function useCart() {
