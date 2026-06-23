@@ -1,13 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { MapPin, ChevronRight, TrendingUp, Sparkles, Bell } from "lucide-react";
+import { MapPin, ChevronRight, TrendingUp, Sparkles, Bell, Heart, Repeat } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { SearchBar } from "@/components/search-bar";
 import { CategoryTabs } from "@/components/category-tabs";
 import { ShopCard } from "@/components/shop-card";
 import { ProductCard } from "@/components/product-card";
+import { ProductSheet } from "@/components/product-sheet";
 import { VoucherCard } from "@/components/voucher-card";
-import { shops, products, vouchers } from "@/lib/mock-data";
+import { BottomCartBar } from "@/components/bottom-cart-bar";
+import { ZonePicker } from "@/components/zone-picker";
+import { shops, products, vouchers, type Product } from "@/lib/mock-data";
+import { useDeliveryZone } from "@/lib/cart-store";
+import { useFavorites } from "@/lib/favorites-store";
 import { useUnreadCount } from "@/lib/notifications-store";
 
 export const Route = createFileRoute("/")({
@@ -27,22 +32,44 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const [, setCategory] = useState<string>("all");
   const unread = useUnreadCount();
+  const zone = useDeliveryZone();
+  const favShops = useFavorites();
+
   const popular = [...products].sort((a, b) => b.soldCount - a.soldCount).slice(0, 6);
-  const nearby = [...shops].sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 4);
+  const nearby = [...shops]
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .slice(0, 4);
+  const favoriteShops = shops.filter((s) => favShops.includes(s.id)).slice(0, 4);
+  const frequentProducts = [...products]
+    .filter((p) => p.available)
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 4);
+
+  const [selected, setSelected] = useState<Product | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const openProduct = (p: Product) => {
+    setSelected(p);
+    setSheetOpen(true);
+  };
 
   return (
     <AppShell>
-      {/* Mobile header / hero */}
       <section className="bg-gradient-to-br from-primary to-primary/80 px-4 pb-5 pt-4 text-primary-foreground md:rounded-b-3xl md:px-6 md:pb-8 md:pt-8">
-        {/* Row 1: greeting + bell (mobile only) */}
         <div className="flex items-center gap-3 md:hidden">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1 text-[11px] opacity-90">
-              <MapPin className="size-3.5 shrink-0" />
-              <span className="truncate">Giao đến</span>
-            </div>
-            <div className="truncate text-sm font-semibold">FPT University, Hòa Lạc</div>
-          </div>
+          <ZonePicker
+            trigger={
+              <button className="min-w-0 flex-1 text-left">
+                <div className="flex items-center gap-1 text-[11px] opacity-90">
+                  <MapPin className="size-3.5 shrink-0" />
+                  <span className="truncate">Giao đến</span>
+                  <ChevronRight className="size-3" />
+                </div>
+                <div className="truncate text-sm font-semibold underline-offset-2 hover:underline">
+                  {zone.name}, Hòa Lạc
+                </div>
+              </button>
+            }
+          />
           <Link
             to="/notifications"
             aria-label="Thông báo"
@@ -65,18 +92,15 @@ function HomePage() {
           </p>
         </div>
 
-        {/* Row 2: search bar — inside hero, no negative margin */}
         <div className="relative z-10 mt-4">
           <SearchBar to="/search" className="mx-auto max-w-2xl shadow-pop" />
         </div>
       </section>
 
-      {/* Categories */}
       <section className="mt-6 px-4">
         <CategoryTabs onChange={setCategory} />
       </section>
 
-      {/* Vouchers */}
       <section className="mt-6 px-4">
         <SectionHeader
           icon={<Sparkles className="size-4" />}
@@ -92,7 +116,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Nearby shops */}
       <section className="mt-8 px-4">
         <SectionHeader
           icon={<MapPin className="size-4" />}
@@ -101,12 +124,45 @@ function HomePage() {
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {nearby.map((s) => (
-            <ShopCard key={s.id} shop={s} />
+            <ShopCard
+              key={s.id}
+              shop={s}
+              supported={s.supportedZones.includes(zone.id)}
+            />
           ))}
         </div>
       </section>
 
-      {/* Popular dishes */}
+      <section className="mt-8 px-4">
+        <SectionHeader
+          icon={<Repeat className="size-4" />}
+          title="Món bạn hay đặt"
+        />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {frequentProducts.map((p) => (
+            <ProductCard key={p.id} product={p} onSelect={openProduct} />
+          ))}
+        </div>
+      </section>
+
+      {favoriteShops.length > 0 && (
+        <section className="mt-8 px-4">
+          <SectionHeader
+            icon={<Heart className="size-4" />}
+            title="Quán bạn yêu thích"
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {favoriteShops.map((s) => (
+              <ShopCard
+                key={s.id}
+                shop={s}
+                supported={s.supportedZones.includes(zone.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="mt-8 px-4">
         <SectionHeader
           icon={<TrendingUp className="size-4" />}
@@ -115,20 +171,30 @@ function HomePage() {
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {popular.map((p) => (
-            <ProductCard key={p.id} product={p} />
+            <ProductCard key={p.id} product={p} onSelect={openProduct} />
           ))}
         </div>
       </section>
 
-      {/* Recommended shops */}
-      <section className="mt-8 px-4 pb-8">
+      <section className="mt-8 px-4 pb-32 md:pb-12">
         <SectionHeader title="Quán mới nổi" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {shops.slice(1, 4).map((s) => (
-            <ShopCard key={s.id} shop={s} />
+            <ShopCard
+              key={s.id}
+              shop={s}
+              supported={s.supportedZones.includes(zone.id)}
+            />
           ))}
         </div>
       </section>
+
+      <ProductSheet
+        product={selected}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+      />
+      <BottomCartBar />
     </AppShell>
   );
 }

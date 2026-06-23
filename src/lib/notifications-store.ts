@@ -166,3 +166,21 @@ export function markAllRead() {
   state = state.map((n) => ({ ...n, read: true }));
   emit();
 }
+
+export function addNotification(n: Omit<AppNotification, "id" | "createdAt" | "timeText" | "read"> & { read?: boolean }) {
+  ensureLoaded();
+  const created: AppNotification = {
+    id: `n${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    timeText: "Vừa xong",
+    read: n.read ?? false,
+    type: n.type,
+    title: n.title,
+    body: n.body,
+    orderId: n.orderId,
+    shopId: n.shopId,
+  };
+  state = [created, ...state];
+  emit();
+  return created;
+}
