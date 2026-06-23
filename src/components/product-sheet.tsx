@@ -26,8 +26,8 @@ export function ProductSheet({
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState("");
 
-  // reset whenever product changes
-  if (product && open && qty < 1) setQty(1);
+
+
 
   const handleAdd = () => {
     if (!product) return;
