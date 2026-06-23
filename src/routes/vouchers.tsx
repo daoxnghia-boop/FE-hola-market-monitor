@@ -14,10 +14,11 @@ function VouchersPage() {
       <div className="px-4 py-4">
         <h1 className="text-2xl font-extrabold">Ưu đãi của bạn</h1>
         <p className="text-sm text-muted-foreground">
-          Áp dụng tại trang giỏ hàng khi thanh toán.
+          Áp dụng tại trang giỏ hàng khi thanh toán. Voucher chỉ giảm tiền món, không
+          giảm phí ship.
         </p>
       </div>
-      <div className="grid gap-3 px-4 pb-8 sm:grid-cols-2">
+      <div className="grid gap-3 px-4 pb-24 sm:grid-cols-2">
         {vouchers.map((v) => (
           <VoucherCard key={v.id} voucher={v} />
         ))}
