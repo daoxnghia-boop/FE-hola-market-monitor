@@ -1,14 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { ArrowLeft, MapPin, Ticket, Wallet, Bike, ShoppingBag } from "lucide-react";
+import { ArrowLeft, MapPin, Ticket, Wallet, Bike, ShoppingBag, ChevronRight } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { CartItem } from "@/components/cart-item";
 import { EmptyState } from "@/components/empty-state";
+import { VoucherCard } from "@/components/voucher-card";
+import { ZonePicker } from "@/components/zone-picker";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useCart, useCartItems, useCartTotal, cartStore } from "@/lib/cart-store";
-import { formatVND, getShop, vouchers } from "@/lib/mock-data";
+import {
+  cartStore,
+  useCart,
+  useCartItems,
+  useCartPricing,
+} from "@/lib/cart-store";
+import { formatVND, getShop, vouchers, voucherStatusFor } from "@/lib/mock-data";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/cart")({
@@ -24,19 +28,11 @@ export const Route = createFileRoute("/cart")({
 function CartPage() {
   const cart = useCart();
   const items = useCartItems();
-  const subtotal = useCartTotal();
+  const pricing = useCartPricing();
   const navigate = useNavigate();
 
   const shop = cart.shopId ? getShop(cart.shopId) : null;
-
-  const [name, setName] = useState("Nguyễn Văn A");
-  const [phone, setPhone] = useState("0987 654 321");
-  const [address, setAddress] = useState("KTX FPT, Hòa Lạc, Thạch Thất, HN");
-  const [note, setNote] = useState("");
-  const [voucherCode, setVoucherCode] = useState("");
-
-  const discount = voucherCode.toUpperCase() === "HOALAC10" ? 10000 : 0;
-  const total = Math.max(0, subtotal - discount);
+  const supported = shop ? shop.supportedZones.includes(pricing.zone.id) : true;
 
   if (items.length === 0 || !shop) {
     return (
@@ -58,22 +54,20 @@ function CartPage() {
     );
   }
 
-  const handlePlaceOrder = () => {
-    if (!name.trim() || !phone.trim() || !address.trim()) {
-      toast.error("Vui lòng điền đầy đủ thông tin giao hàng");
+  const handleContinue = () => {
+    if (!supported) {
+      toast.error("Quán chưa giao tới khu này. Hãy đổi khu giao.");
       return;
     }
-    cartStore.clear();
-    toast.success("Đặt đơn thành công!");
-    navigate({ to: "/orders/$orderId", params: { orderId: "DH240618" } });
+    navigate({ to: "/checkout" });
   };
 
   return (
     <AppShell>
-      <PageHeader title="Giỏ hàng & Thanh toán" />
+      <PageHeader title="Giỏ hàng" />
 
-      <div className="grid gap-4 px-4 pb-32 md:grid-cols-[1.5fr_1fr] md:pb-12">
-        {/* Left: items + info */}
+      <div className="grid gap-4 px-4 pb-36 md:grid-cols-[1.5fr_1fr] md:pb-12">
+        {/* Left */}
         <div className="space-y-4">
           {/* Shop */}
           <Link
@@ -84,14 +78,44 @@ function CartPage() {
             <img src={shop.logo} alt="" className="size-12 rounded-xl object-cover" />
             <div className="min-w-0 flex-1">
               <div className="truncate font-semibold">{shop.name}</div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <MapPin className="size-3" /> {shop.area} · {shop.distanceKm} km
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span
+                  className={
+                    shop.status === "open" && shop.isOpen
+                      ? "text-success"
+                      : "text-muted-foreground"
+                  }
+                >
+                  ● {shop.status === "open" && shop.isOpen ? "Đang mở" : "Tạm nghỉ"}
+                </span>
+                <span>• Dự kiến ~{shop.prepTime} phút</span>
               </div>
             </div>
-            <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
-              Sửa
-            </span>
+            <ChevronRight className="size-4 text-muted-foreground" />
           </Link>
+
+          {/* Delivery zone */}
+          <ZonePicker
+            trigger={
+              <button className="flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left shadow-card hover:shadow-pop">
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                  <MapPin className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs text-muted-foreground">Giao đến</div>
+                  <div className="truncate font-semibold">{pricing.zone.name}</div>
+                </div>
+                <span className="text-xs font-semibold text-primary">Đổi</span>
+              </button>
+            }
+          />
+
+          {!supported && (
+            <div className="rounded-2xl bg-warning/10 p-3 text-sm text-warning">
+              Quán chưa hỗ trợ giao tới <b>{pricing.zone.name}</b>. Vui lòng đổi khu giao
+              hoặc chọn quán khác.
+            </div>
+          )}
 
           {/* Items */}
           <div className="space-y-3">
@@ -100,90 +124,70 @@ function CartPage() {
             ))}
           </div>
 
-          {/* Delivery info */}
-          <div className="space-y-3 rounded-2xl bg-card p-4 shadow-card">
-            <h3 className="font-semibold">Thông tin giao hàng</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Họ tên">
-                <Input value={name} onChange={(e) => setName(e.target.value)} />
-              </Field>
-              <Field label="Số điện thoại">
-                <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </Field>
-              <Field label="Địa chỉ nhận" className="sm:col-span-2">
-                <Input value={address} onChange={(e) => setAddress(e.target.value)} />
-              </Field>
-              <Field label="Ghi chú cho quán" className="sm:col-span-2">
-                <Textarea
-                  rows={2}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="VD: Ít cay, thêm tương ớt..."
-                />
-              </Field>
-            </div>
-          </div>
-
           {/* Voucher */}
           <div className="rounded-2xl bg-card p-4 shadow-card">
-            <h3 className="mb-2 flex items-center gap-2 font-semibold">
-              <Ticket className="size-4 text-primary" /> Mã ưu đãi
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
+              <Ticket className="size-4 text-primary" /> Ưu đãi
             </h3>
-            <div className="flex gap-2">
-              <Input
-                value={voucherCode}
-                onChange={(e) => setVoucherCode(e.target.value)}
-                placeholder="Nhập mã (vd: HOALAC10)"
-                className="uppercase"
-              />
-              <Button
-                variant={discount > 0 ? "secondary" : "outline"}
-                onClick={() => {
-                  if (discount > 0) toast.success("Đã áp dụng mã ưu đãi");
-                  else toast.error("Mã không hợp lệ hoặc chưa nhập");
-                }}
-              >
-                Áp dụng
-              </Button>
-            </div>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {vouchers.map((v) => (
-                <button
-                  key={v.id}
-                  onClick={() => setVoucherCode(v.code)}
-                  className="shrink-0 rounded-full border border-dashed border-primary/50 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary"
-                >
-                  {v.discountText} · {v.code}
-                </button>
-              ))}
+            <div className="space-y-2">
+              {vouchers.map((v) => {
+                const status = voucherStatusFor(v, pricing.subtotal);
+                const usable = status === "usable" || status === "soon_expire";
+                const active = cart.voucherCode === v.code;
+                return (
+                  <VoucherCard
+                    key={v.id}
+                    voucher={v}
+                    subtotal={pricing.subtotal}
+                    active={active}
+                    onApply={() => {
+                      if (active) {
+                        cartStore.setVoucher(null);
+                        toast.success("Đã bỏ áp dụng voucher");
+                        return;
+                      }
+                      if (!usable) {
+                        toast.error(
+                          status === "not_eligible"
+                            ? "Đơn hàng chưa đủ điều kiện áp dụng voucher"
+                            : "Voucher chưa thể dùng",
+                        );
+                        return;
+                      }
+                      cartStore.setVoucher(v.code);
+                      toast.success("Đã áp dụng voucher");
+                    }}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Right: summary */}
+        {/* Right summary */}
         <aside className="space-y-3 md:sticky md:top-20 md:self-start">
-          <div className="space-y-3 rounded-2xl bg-card p-4 shadow-card">
-            <h3 className="font-semibold">Tóm tắt đơn</h3>
-            <Row label="Tạm tính" value={formatVND(subtotal)} />
-            <Row label="Phí giao hàng" value="Quán tự giao" hint />
-            {discount > 0 && (
+          <div className="space-y-2 rounded-2xl bg-card p-4 shadow-card">
+            <h3 className="mb-1 font-semibold">Tóm tắt đơn</h3>
+            <Row label="Tiền món" value={formatVND(pricing.subtotal)} />
+            {pricing.voucher && (
               <Row
-                label={`Ưu đãi (${voucherCode.toUpperCase()})`}
-                value={`-${formatVND(discount)}`}
+                label={`Voucher (${pricing.voucher.code})`}
+                value={`-${formatVND(pricing.discount)}`}
                 accent="success"
               />
             )}
+            <Row label="Phí giao hàng" value={formatVND(pricing.shipFee)} />
             <div className="my-2 border-t border-dashed" />
-            <Row label="Tổng cộng" value={formatVND(total)} bold />
+            <Row label="Tổng cần trả" value={formatVND(pricing.total)} bold />
 
             <div className="space-y-2 rounded-xl bg-accent p-3 text-xs text-accent-foreground">
               <div className="flex items-center gap-2 font-semibold">
                 <Wallet className="size-4" />
-                Thanh toán trực tiếp cho quán
+                Thanh toán trực tiếp cho quán khi nhận hàng
               </div>
               <div className="flex items-center gap-2 font-semibold">
                 <Bike className="size-4" />
-                Quán tự giao hàng — không phụ phí
+                Quán tự giao hàng
               </div>
             </div>
           </div>
@@ -191,9 +195,10 @@ function CartPage() {
           <Button
             size="lg"
             className="hidden h-12 w-full rounded-full text-base font-bold md:flex"
-            onClick={handlePlaceOrder}
+            onClick={handleContinue}
+            disabled={!supported}
           >
-            Đặt đơn · {formatVND(total)}
+            Tiếp tục đặt hàng · {formatVND(pricing.total)}
           </Button>
         </aside>
       </div>
@@ -203,18 +208,19 @@ function CartPage() {
         <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Tổng
+              Tổng cần trả
             </div>
             <div className="truncate text-lg font-extrabold text-primary">
-              {formatVND(total)}
+              {formatVND(pricing.total)}
             </div>
           </div>
           <Button
             size="lg"
-            onClick={handlePlaceOrder}
-            className="h-12 flex-1 rounded-full text-base font-bold"
+            onClick={handleContinue}
+            disabled={!supported}
+            className="h-12 flex-[1.2] rounded-full text-base font-bold"
           >
-            Đặt đơn ngay
+            Tiếp tục
           </Button>
         </div>
       </div>
@@ -236,39 +242,20 @@ function PageHeader({ title }: { title: string }) {
   );
 }
 
-function Field({
-  label,
-  children,
-  className,
-}: {
-  label: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <label className={"block space-y-1 text-sm " + (className ?? "")}>
-      <span className="font-medium text-muted-foreground">{label}</span>
-      {children}
-    </label>
-  );
-}
-
 function Row({
   label,
   value,
   bold,
-  hint,
   accent,
 }: {
   label: string;
   value: string;
   bold?: boolean;
-  hint?: boolean;
   accent?: "success";
 }) {
   return (
     <div className="flex items-center justify-between text-sm">
-      <span className={hint ? "text-muted-foreground" : ""}>{label}</span>
+      <span className={bold ? "font-semibold" : ""}>{label}</span>
       <span
         className={[
           bold ? "text-lg font-extrabold text-primary" : "font-semibold",

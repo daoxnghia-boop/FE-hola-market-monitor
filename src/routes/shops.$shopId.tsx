@@ -1,18 +1,32 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Clock, MapPin, Phone, ShoppingBag, Heart, Share2, Bike } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  MapPin,
+  Phone,
+  Heart,
+  Share2,
+  Bike,
+  Coffee,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { ProductCard } from "@/components/product-card";
+import { ProductSheet } from "@/components/product-sheet";
+import { BottomCartBar } from "@/components/bottom-cart-bar";
+import { ZonePicker } from "@/components/zone-picker";
 import { RatingStars } from "@/components/rating-stars";
-import { Button } from "@/components/ui/button";
 import {
   categories,
   formatVND,
   getProductsByShop,
   getShop,
+  type Product,
 } from "@/lib/mock-data";
-import { useCart, useCartTotal } from "@/lib/cart-store";
+import { useDeliveryZone } from "@/lib/cart-store";
+import { favoritesStore, useIsFavorite } from "@/lib/favorites-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/shops/$shopId")({
@@ -47,10 +61,26 @@ function ShopDetailPage() {
       ? allProducts
       : allProducts.filter((p) => p.category === activeCat);
 
-  const cart = useCart();
-  const total = useCartTotal();
-  const cartCount = cart.items.reduce((s, i) => s + i.quantity, 0);
-  const cartBelongsToShop = cart.shopId === shop.id && cartCount > 0;
+  const zone = useDeliveryZone();
+  const supported = shop.supportedZones.includes(zone.id);
+  const shopOpen = shop.status === "open" && shop.isOpen;
+  const canOrder = shopOpen && supported;
+  const fav = useIsFavorite(shop.id);
+
+  const [selected, setSelected] = useState<Product | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const openProduct = (p: Product) => {
+    setSelected(p);
+    setSheetOpen(true);
+  };
+
+  const productDisabledLabel = !shopOpen
+    ? shop.status === "out_of_menu"
+      ? "Hết món hôm nay"
+      : "Quán tạm nghỉ"
+    : !supported
+      ? "Chưa giao khu này"
+      : undefined;
 
   return (
     <AppShell>
@@ -68,10 +98,13 @@ function ShopDetailPage() {
         </h2>
         <button
           aria-label="Yêu thích"
-          onClick={() => toast.success("Đã thêm vào yêu thích")}
+          onClick={() => {
+            favoritesStore.toggle(shop.id);
+            toast.success(fav ? "Đã bỏ lưu quán" : "Đã lưu quán yêu thích");
+          }}
           className="grid size-10 place-items-center rounded-full bg-card shadow-card"
         >
-          <Heart className="size-5" />
+          <Heart className={cn("size-5", fav && "fill-destructive text-destructive")} />
         </button>
         <button
           aria-label="Chia sẻ"
@@ -82,17 +115,13 @@ function ShopDetailPage() {
         </button>
       </header>
 
-      {/* Cover image — fixed reasonable height, no overlap */}
+      {/* Cover */}
       <div className="relative h-44 w-full overflow-hidden sm:h-56 md:h-72 md:rounded-b-3xl">
-        <img
-          src={shop.cover}
-          alt={shop.name}
-          className="size-full object-cover"
-        />
+        <img src={shop.cover} alt={shop.name} className="size-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/40 to-transparent" />
       </div>
 
-      {/* Shop info card — sits BELOW cover with margin */}
+      {/* Shop info card */}
       <div className="px-4 pt-4">
         <div className="rounded-2xl bg-card p-4 shadow-card">
           <div className="flex items-start gap-3">
@@ -109,13 +138,17 @@ function ShopDetailPage() {
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                    shop.isOpen
+                    shopOpen
                       ? "bg-success/15 text-success"
                       : "bg-muted text-muted-foreground",
                   )}
                 >
                   <span className="size-1.5 rounded-full bg-current" />
-                  {shop.isOpen ? "Đang mở cửa" : "Tạm nghỉ"}
+                  {shop.status === "out_of_menu"
+                    ? "Hết món hôm nay"
+                    : shopOpen
+                      ? "Đang mở cửa"
+                      : "Tạm nghỉ"}
                 </span>
               </div>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -135,21 +168,50 @@ function ShopDetailPage() {
               {shop.distanceKm} km
             </InfoChip>
             <InfoChip icon={<Bike className="size-3.5" />}>
-              Phí ship 10.000đ
+              {supported ? `Ship ${formatVND(zone.fee)}` : "Chưa hỗ trợ khu này"}
             </InfoChip>
           </div>
 
+          <ZonePicker
+            trigger={
+              <button className="mt-3 flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-background px-3 py-2 text-left text-xs hover:border-primary/40">
+                <span className="inline-flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="size-3.5" /> Giao tới
+                </span>
+                <span className="truncate font-semibold text-foreground">
+                  {zone.shortName} · {supported ? formatVND(zone.fee) : "Chưa giao"}
+                </span>
+              </button>
+            }
+          />
+
           <div className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
             <p>📍 {shop.address}</p>
-            <p>🕒 Giờ mở cửa: {shop.openHours}</p>
+            <p>🕒 {shop.openHours} · Dự kiến 15–25 phút</p>
             <p className="inline-flex items-center gap-1">
               <Phone className="size-3.5" /> {shop.phone}
             </p>
           </div>
         </div>
+
+        {/* Warnings */}
+        {!shopOpen && (
+          <div className="mt-3 flex items-center gap-2 rounded-2xl bg-muted p-3 text-sm text-muted-foreground">
+            <Coffee className="size-4 shrink-0" />
+            {shop.status === "out_of_menu"
+              ? "Quán đã hết món hôm nay. Mời bạn quay lại vào ngày mai."
+              : "Quán đang tạm nghỉ. Bạn vẫn có thể xem thực đơn."}
+          </div>
+        )}
+        {shopOpen && !supported && (
+          <div className="mt-3 flex items-center gap-2 rounded-2xl bg-warning/10 p-3 text-sm text-warning">
+            <AlertCircle className="size-4 shrink-0" />
+            Quán chưa hỗ trợ giao tới {zone.shortName}. Hãy đổi khu để đặt món.
+          </div>
+        )}
       </div>
 
-      {/* Category filter pills */}
+      {/* Category pills */}
       <div className="sticky top-14 z-20 mt-4 bg-background/95 px-4 py-2 backdrop-blur md:top-16">
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[{ id: "all", name: "Tất cả", icon: "🍽️" }, ...productCats].map((c) => {
@@ -174,38 +236,32 @@ function ShopDetailPage() {
       </div>
 
       {/* Menu */}
-      <section className="space-y-3 px-4 pb-32 pt-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 md:pb-12">
+      <section className="space-y-3 px-4 pb-36 pt-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 md:pb-24">
         {filtered.length === 0 ? (
           <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card md:col-span-2">
             Chưa có món trong nhóm này.
           </p>
         ) : (
           filtered.map((p) => (
-            <ProductCard key={p.id} product={p} layout="row" />
+            <ProductCard
+              key={p.id}
+              product={p}
+              layout="row"
+              onSelect={openProduct}
+              disabled={!canOrder}
+              disabledLabel={productDisabledLabel}
+            />
           ))
         )}
       </section>
 
-      {/* Sticky cart bar */}
-      {cartBelongsToShop && (
-        <div className="fixed inset-x-0 bottom-16 z-30 px-4 md:bottom-6">
-          <Link
-            to="/cart"
-            className="mx-auto flex max-w-md items-center justify-between gap-3 rounded-full bg-primary px-5 py-3 text-primary-foreground shadow-pop transition hover:bg-primary/90"
-          >
-            <span className="inline-flex items-center gap-2 font-semibold">
-              <span className="relative">
-                <ShoppingBag className="size-5" />
-                <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-warning px-1 text-[10px] font-bold text-warning-foreground">
-                  {cartCount}
-                </span>
-              </span>
-              Xem giỏ hàng
-            </span>
-            <span className="font-bold">{formatVND(total)}</span>
-          </Link>
-        </div>
-      )}
+      <ProductSheet
+        product={selected}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        canOrder={canOrder}
+      />
+      <BottomCartBar />
     </AppShell>
   );
 }
