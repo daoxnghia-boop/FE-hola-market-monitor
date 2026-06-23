@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ShoppingBag, MapPin } from "lucide-react";
+import { ShoppingBag, MapPin, Bell } from "lucide-react";
 import { useCartCount } from "@/lib/cart-store";
+import { useUnreadCount } from "@/lib/notifications-store";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -13,6 +14,7 @@ const links = [
 export function TopNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const count = useCartCount();
+  const unread = useUnreadCount();
 
   return (
     <header className="sticky top-0 z-30 hidden border-b border-border bg-card/90 backdrop-blur md:block">
@@ -49,6 +51,17 @@ export function TopNav() {
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <Link
+            to="/notifications"
+            aria-label="Thông báo"
+            className="relative grid size-10 place-items-center rounded-full bg-accent text-accent-foreground"
+          >
+            <Bell className="size-4" />
+            {unread > 0 && (
+              <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </Link>
             to="/cart"
             className="relative inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold"
           >
