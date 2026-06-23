@@ -26,41 +26,50 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const [, setCategory] = useState<string>("all");
+  const unread = useUnreadCount();
   const popular = [...products].sort((a, b) => b.soldCount - a.soldCount).slice(0, 6);
   const nearby = [...shops].sort((a, b) => a.distanceKm - b.distanceKm).slice(0, 4);
 
   return (
     <AppShell>
       {/* Mobile header / hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary to-primary/80 px-4 pb-16 pt-6 text-primary-foreground md:rounded-b-3xl md:pb-20 md:pt-10">
-        <div className="flex items-center justify-between md:hidden">
-          <div>
-            <div className="flex items-center gap-1 text-xs opacity-90">
-              <MapPin className="size-3.5" /> Giao đến
+      <section className="bg-gradient-to-br from-primary to-primary/80 px-4 pb-5 pt-4 text-primary-foreground md:rounded-b-3xl md:px-6 md:pb-8 md:pt-8">
+        {/* Row 1: greeting + bell (mobile only) */}
+        <div className="flex items-center gap-3 md:hidden">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1 text-[11px] opacity-90">
+              <MapPin className="size-3.5 shrink-0" />
+              <span className="truncate">Giao đến</span>
             </div>
-            <div className="text-sm font-semibold">FPT University, Hòa Lạc</div>
+            <div className="truncate text-sm font-semibold">FPT University, Hòa Lạc</div>
           </div>
           <Link
-            to="/account"
-            className="grid size-10 place-items-center rounded-full bg-white/15 backdrop-blur"
+            to="/notifications"
+            aria-label="Thông báo"
+            className="relative grid size-10 shrink-0 place-items-center rounded-full bg-white/15 backdrop-blur transition active:scale-95"
           >
-            🙋
+            <Bell className="size-5" />
+            {unread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-warning px-1 text-[10px] font-bold text-warning-foreground ring-2 ring-primary">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
           </Link>
         </div>
-        <div className="mt-4 max-w-xl md:mt-0">
-          <h1 className="text-2xl font-extrabold leading-tight md:text-4xl">
+        <div className="mt-3 max-w-xl md:mt-0">
+          <h1 className="text-xl font-extrabold leading-tight md:text-4xl">
             Đói rồi? Đặt ngay quán quanh bạn 🍜
           </h1>
-          <p className="mt-1 text-sm opacity-90 md:text-base">
+          <p className="mt-1 text-xs opacity-90 md:text-base">
             Nhanh hơn nhắn Zalo, không sót đơn, theo dõi trạng thái rõ ràng.
           </p>
         </div>
-      </section>
 
-      {/* Search bar overlapping hero */}
-      <div className="relative z-10 -mt-10 px-4 md:-mt-12">
-        <SearchBar to="/search" className="mx-auto max-w-2xl shadow-pop" />
-      </div>
+        {/* Row 2: search bar — inside hero, no negative margin */}
+        <div className="relative z-10 mt-4">
+          <SearchBar to="/search" className="mx-auto max-w-2xl shadow-pop" />
+        </div>
+      </section>
 
       {/* Categories */}
       <section className="mt-6 px-4">
