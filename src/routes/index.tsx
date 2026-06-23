@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { MapPin, ChevronRight, TrendingUp, Sparkles } from "lucide-react";
+import { MapPin, ChevronRight, TrendingUp, Sparkles, Bell } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { SearchBar } from "@/components/search-bar";
 import { CategoryTabs } from "@/components/category-tabs";
@@ -8,6 +8,7 @@ import { ShopCard } from "@/components/shop-card";
 import { ProductCard } from "@/components/product-card";
 import { VoucherCard } from "@/components/voucher-card";
 import { shops, products, vouchers } from "@/lib/mock-data";
+import { useUnreadCount } from "@/lib/notifications-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
