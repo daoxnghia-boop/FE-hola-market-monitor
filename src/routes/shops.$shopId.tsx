@@ -1,6 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ArrowLeft, Clock, MapPin, Phone, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Phone, ShoppingBag, Heart, Share2, Bike } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { ProductCard } from "@/components/product-card";
 import { RatingStars } from "@/components/rating-stars";
@@ -53,34 +54,56 @@ function ShopDetailPage() {
 
   return (
     <AppShell>
-      {/* Cover */}
-      <div className="relative h-52 w-full overflow-hidden md:h-72 md:rounded-b-3xl">
+      {/* Mobile sticky header */}
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 bg-card/95 px-3 backdrop-blur md:hidden">
+        <Link
+          to="/"
+          aria-label="Quay lại"
+          className="grid size-10 place-items-center rounded-full bg-card shadow-card"
+        >
+          <ArrowLeft className="size-5" />
+        </Link>
+        <h2 className="min-w-0 flex-1 truncate text-center text-sm font-semibold">
+          {shop.name}
+        </h2>
+        <button
+          aria-label="Yêu thích"
+          onClick={() => toast.success("Đã thêm vào yêu thích")}
+          className="grid size-10 place-items-center rounded-full bg-card shadow-card"
+        >
+          <Heart className="size-5" />
+        </button>
+        <button
+          aria-label="Chia sẻ"
+          onClick={() => toast("Đã sao chép liên kết quán")}
+          className="grid size-10 place-items-center rounded-full bg-card shadow-card"
+        >
+          <Share2 className="size-5" />
+        </button>
+      </header>
+
+      {/* Cover image — fixed reasonable height, no overlap */}
+      <div className="relative h-44 w-full overflow-hidden sm:h-56 md:h-72 md:rounded-b-3xl">
         <img
           src={shop.cover}
           alt={shop.name}
           className="size-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/10 to-transparent" />
-        <Link
-          to="/"
-          className="absolute left-4 top-4 grid size-10 place-items-center rounded-full bg-white/90 text-foreground shadow-card backdrop-blur md:hidden"
-        >
-          <ArrowLeft className="size-5" />
-        </Link>
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/40 to-transparent" />
       </div>
 
-      {/* Shop info card */}
-      <div className="-mt-12 px-4">
+      {/* Shop info card — sits BELOW cover with margin */}
+      <div className="px-4 pt-4">
         <div className="rounded-2xl bg-card p-4 shadow-card">
           <div className="flex items-start gap-3">
             <img
               src={shop.logo}
               alt=""
-              className="size-16 shrink-0 rounded-xl border-2 border-card object-cover shadow-card"
+              className="size-14 shrink-0 rounded-xl border-2 border-card object-cover shadow-card"
             />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-lg font-extrabold md:text-xl">
+                <h1 className="min-w-0 flex-1 truncate text-lg font-extrabold md:text-xl">
                   {shop.name}
                 </h1>
                 <span
@@ -92,7 +115,7 @@ function ShopDetailPage() {
                   )}
                 >
                   <span className="size-1.5 rounded-full bg-current" />
-                  {shop.isOpen ? "Đang mở cửa" : "Tạm đóng"}
+                  {shop.isOpen ? "Đang mở cửa" : "Tạm nghỉ"}
                 </span>
               </div>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -111,17 +134,23 @@ function ShopDetailPage() {
             <InfoChip icon={<MapPin className="size-3.5" />}>
               {shop.distanceKm} km
             </InfoChip>
-            <InfoChip icon={<Phone className="size-3.5" />}>{shop.phone}</InfoChip>
+            <InfoChip icon={<Bike className="size-3.5" />}>
+              Phí ship 10.000đ
+            </InfoChip>
           </div>
 
-          <p className="mt-2 text-xs text-muted-foreground">
-            📍 {shop.address} · Giờ mở cửa {shop.openHours}
-          </p>
+          <div className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+            <p>📍 {shop.address}</p>
+            <p>🕒 Giờ mở cửa: {shop.openHours}</p>
+            <p className="inline-flex items-center gap-1">
+              <Phone className="size-3.5" /> {shop.phone}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Category filter pills */}
-      <div className="sticky top-0 z-20 mt-4 bg-background/95 px-4 py-2 backdrop-blur md:top-16">
+      <div className="sticky top-14 z-20 mt-4 bg-background/95 px-4 py-2 backdrop-blur md:top-16">
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[{ id: "all", name: "Tất cả", icon: "🍽️" }, ...productCats].map((c) => {
             const active = activeCat === c.id;
