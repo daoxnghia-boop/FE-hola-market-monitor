@@ -3,23 +3,52 @@ import { Button } from "@/components/ui/button";
 import { cartStore } from "@/lib/cart-store";
 import { formatVND, type Product } from "@/lib/mock-data";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export function ProductCard({
   product,
   layout = "grid",
+  onSelect,
+  disabled = false,
+  disabledLabel,
 }: {
   product: Product;
   layout?: "grid" | "row";
+  /** When provided, clicking the card or "+" calls this instead of adding directly. */
+  onSelect?: (p: Product) => void;
+  /** Force-disable adding (e.g. shop closed or zone not supported). */
+  disabled?: boolean;
+  disabledLabel?: string;
 }) {
-  const handleAdd = () => {
-    if (!product.available) return;
+  const blocked = disabled || !product.available;
+
+  const handleAdd = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (blocked) return;
+    if (onSelect) return onSelect(product);
     cartStore.add(product.id, 1);
-    toast.success(`Đã thêm ${product.name}`);
+    toast.success(`Đã thêm ${product.name} vào giỏ`);
   };
+
+  const handleCardClick = () => {
+    if (blocked) return;
+    if (onSelect) onSelect(product);
+  };
+
+  const overlayLabel = !product.available ? "Hết món" : disabledLabel;
 
   if (layout === "row") {
     return (
-      <div className="flex gap-3 rounded-2xl bg-card p-3 shadow-card">
+      <div
+        onClick={handleCardClick}
+        role={onSelect ? "button" : undefined}
+        tabIndex={onSelect && !blocked ? 0 : -1}
+        className={cn(
+          "flex gap-3 rounded-2xl bg-card p-3 shadow-card transition",
+          onSelect && !blocked && "cursor-pointer hover:shadow-pop",
+          blocked && "opacity-70",
+        )}
+      >
         <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted">
           <img
             src={product.image}
@@ -27,9 +56,9 @@ export function ProductCard({
             loading="lazy"
             className="size-full object-cover"
           />
-          {!product.available && (
-            <div className="absolute inset-0 grid place-items-center bg-foreground/60 text-xs font-semibold text-background">
-              Hết món
+          {overlayLabel && (
+            <div className="absolute inset-0 grid place-items-center bg-foreground/60 px-1 text-center text-[11px] font-semibold leading-tight text-background">
+              {overlayLabel}
             </div>
           )}
         </div>
@@ -45,7 +74,7 @@ export function ProductCard({
             <Button
               size="icon"
               onClick={handleAdd}
-              disabled={!product.available}
+              disabled={blocked}
               className="rounded-full"
               aria-label="Thêm vào giỏ"
             >
@@ -58,7 +87,16 @@ export function ProductCard({
   }
 
   return (
-    <div className="group overflow-hidden rounded-2xl bg-card shadow-card transition hover:-translate-y-0.5 hover:shadow-pop">
+    <div
+      onClick={handleCardClick}
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect && !blocked ? 0 : -1}
+      className={cn(
+        "group overflow-hidden rounded-2xl bg-card shadow-card transition hover:-translate-y-0.5 hover:shadow-pop",
+        onSelect && !blocked && "cursor-pointer",
+        blocked && "opacity-70",
+      )}
+    >
       <div className="relative aspect-square overflow-hidden bg-muted">
         <img
           src={product.image}
@@ -66,15 +104,15 @@ export function ProductCard({
           loading="lazy"
           className="size-full object-cover transition group-hover:scale-105"
         />
-        {!product.available && (
-          <div className="absolute inset-0 grid place-items-center bg-foreground/60 text-sm font-semibold text-background">
-            Hết món
+        {overlayLabel && (
+          <div className="absolute inset-0 grid place-items-center bg-foreground/60 px-2 text-center text-sm font-semibold text-background">
+            {overlayLabel}
           </div>
         )}
         <Button
           size="icon"
           onClick={handleAdd}
-          disabled={!product.available}
+          disabled={blocked}
           className="absolute bottom-2 right-2 size-9 rounded-full shadow-pop"
           aria-label="Thêm vào giỏ"
         >
