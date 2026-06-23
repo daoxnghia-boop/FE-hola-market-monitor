@@ -1,5 +1,12 @@
 import { useSyncExternalStore } from "react";
-import { products, type Product } from "./mock-data";
+import {
+  DEFAULT_ZONE_ID,
+  getVoucher,
+  getZone,
+  products,
+  voucherStatusFor,
+  type Product,
+} from "./mock-data";
 
 export type CartItem = {
   productId: string;
@@ -10,31 +17,53 @@ export type CartItem = {
 type CartState = {
   items: CartItem[];
   shopId: string | null;
+  deliveryZoneId: string;
+  voucherCode: string | null;
 };
 
-const STORAGE_KEY = "hoalac_cart_v1";
+const STORAGE_KEY = "hoalac_cart_v2";
 
-let state: CartState = { items: [], shopId: null };
-const serverSnapshot: CartState = { items: [], shopId: null };
+let state: CartState = {
+  items: [],
+  shopId: null,
+  deliveryZoneId: DEFAULT_ZONE_ID,
+  voucherCode: null,
+};
+const serverSnapshot: CartState = { ...state };
 const listeners = new Set<() => void>();
 
 function load() {
   if (typeof window === "undefined") return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) state = JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<CartState>;
+      state = {
+        items: parsed.items ?? [],
+        shopId: parsed.shopId ?? null,
+        deliveryZoneId: parsed.deliveryZoneId ?? DEFAULT_ZONE_ID,
+        voucherCode: parsed.voucherCode ?? null,
+      };
+    }
   } catch {}
 }
 load();
 
 function persist() {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {}
 }
 
 function emit() {
   persist();
   listeners.forEach((l) => l());
+}
+
+function clone(next: Partial<CartState>) {
+  state = { ...state, ...next, items: next.items ? [...next.items] : [...state.items] };
+  emit();
 }
 
 export const cartStore = {
@@ -43,36 +72,76 @@ export const cartStore = {
     listeners.add(cb);
     return () => listeners.delete(cb);
   },
-  add(productId: string, qty = 1) {
+  add(productId: string, qty = 1, note?: string) {
     const p = products.find((x) => x.id === productId);
-    if (!p) return;
-    if (state.shopId && state.shopId !== p.shopId) {
-      state = { items: [{ productId, quantity: qty }], shopId: p.shopId };
+    if (!p || !p.available) return;
+    let items = state.items;
+    let shopId = state.shopId;
+    let voucherCode = state.voucherCode;
+    if (shopId && shopId !== p.shopId) {
+      items = [{ productId, quantity: qty, note }];
+      shopId = p.shopId;
+      voucherCode = null;
     } else {
-      const existing = state.items.find((i) => i.productId === productId);
-      if (existing) existing.quantity += qty;
-      else state.items.push({ productId, quantity: qty });
-      state.shopId = p.shopId;
+      const existing = items.find((i) => i.productId === productId);
+      if (existing) {
+        existing.quantity += qty;
+        if (note !== undefined) existing.note = note;
+      } else {
+        items.push({ productId, quantity: qty, note });
+      }
+      shopId = p.shopId;
     }
-    state = { ...state, items: [...state.items] };
-    emit();
+    clone({ items, shopId, voucherCode });
   },
   setQty(productId: string, qty: number) {
+    let items = state.items;
+    let shopId = state.shopId;
+    let voucherCode = state.voucherCode;
     if (qty <= 0) {
-      state.items = state.items.filter((i) => i.productId !== productId);
+      items = items.filter((i) => i.productId !== productId);
     } else {
-      const it = state.items.find((i) => i.productId === productId);
+      const it = items.find((i) => i.productId === productId);
       if (it) it.quantity = qty;
     }
-    if (state.items.length === 0) state.shopId = null;
-    state = { ...state, items: [...state.items] };
-    emit();
+    if (items.length === 0) {
+      shopId = null;
+      voucherCode = null;
+    }
+    clone({ items, shopId, voucherCode });
+  },
+  setNote(productId: string, note: string) {
+    const items = state.items.map((i) =>
+      i.productId === productId ? { ...i, note } : i,
+    );
+    clone({ items });
   },
   remove(productId: string) {
     this.setQty(productId, 0);
   },
   clear() {
-    state = { items: [], shopId: null };
+    state = {
+      items: [],
+      shopId: null,
+      deliveryZoneId: state.deliveryZoneId,
+      voucherCode: null,
+    };
+    emit();
+  },
+  setZone(zoneId: string) {
+    clone({ deliveryZoneId: zoneId });
+  },
+  setVoucher(code: string | null) {
+    clone({ voucherCode: code });
+  },
+  /** Adds many items at once (used by reorder). Replaces current cart for that shop. */
+  reorder(shopId: string, items: { productId: string; quantity: number; note?: string }[]) {
+    state = {
+      items: items.map((i) => ({ ...i })),
+      shopId,
+      deliveryZoneId: state.deliveryZoneId,
+      voucherCode: null,
+    };
     emit();
   },
 };
@@ -100,7 +169,34 @@ export function useCartCount() {
   return c.items.reduce((s, i) => s + i.quantity, 0);
 }
 
-export function useCartTotal() {
+export function useCartSubtotal() {
   const items = useCartItems();
   return items.reduce((s, i) => s + i.product.price * i.quantity, 0);
+}
+
+// Backward-compat alias
+export const useCartTotal = useCartSubtotal;
+
+export function useDeliveryZone() {
+  const c = useCart();
+  return getZone(c.deliveryZoneId);
+}
+
+/** Returns full pricing including ship + voucher discount for current cart. */
+export function useCartPricing() {
+  const c = useCart();
+  const subtotal = useCartSubtotal();
+  const zone = getZone(c.deliveryZoneId);
+  const shipFee = subtotal > 0 ? zone.fee : 0;
+  let discount = 0;
+  let voucher = null as ReturnType<typeof getVoucher> | null;
+  if (c.voucherCode) {
+    const v = getVoucher(c.voucherCode);
+    if (v && voucherStatusFor(v, subtotal) === v.status) {
+      voucher = v;
+      discount = v.discountAmount;
+    }
+  }
+  const total = Math.max(0, subtotal - discount) + shipFee;
+  return { subtotal, shipFee, discount, total, zone, voucher };
 }

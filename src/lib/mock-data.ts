@@ -13,10 +13,12 @@ export type Product = {
   image: string;
   category: string;
   available: boolean;
-  prepTime: number; // minutes
+  prepTime: number;
   rating: number;
   soldCount: number;
 };
+
+export type ShopStatus = "open" | "break" | "out_of_menu";
 
 export type Shop = {
   id: string;
@@ -29,12 +31,23 @@ export type Shop = {
   area: string;
   distanceKm: number;
   isOpen: boolean;
-  prepTime: number; // average minutes
+  status: ShopStatus;
+  prepTime: number;
   categories: string[];
   description: string;
   phone: string;
   openHours: string;
+  /** zone ids this shop delivers to */
+  supportedZones: string[];
 };
+
+export type VoucherStatus =
+  | "usable"
+  | "soon_expire"
+  | "used"
+  | "expired"
+  | "locked"
+  | "not_eligible";
 
 export type Voucher = {
   id: string;
@@ -42,7 +55,11 @@ export type Voucher = {
   title: string;
   description: string;
   discountText: string;
+  discountAmount: number;
+  minOrder: number;
   expiry: string;
+  /** base status; subtotal-based eligibility computed at runtime */
+  status: Exclude<VoucherStatus, "not_eligible">;
 };
 
 export type OrderStatus =
@@ -73,6 +90,27 @@ export const ORDER_STATUS_FLOW: OrderStatus[] = [
   "hoan_thanh",
 ];
 
+export type DeliveryZone = {
+  id: string;
+  name: string;
+  shortName: string;
+  fee: number;
+};
+
+export const DELIVERY_ZONES: DeliveryZone[] = [
+  { id: "fpt-uni", name: "FPT University", shortName: "FPT University", fee: 10000 },
+  { id: "ktx-fpt", name: "KTX FPT", shortName: "KTX FPT", fee: 12000 },
+  { id: "fville-1", name: "F-Ville 1", shortName: "F-Ville 1", fee: 8000 },
+  { id: "fville-2", name: "F-Ville 2", shortName: "F-Ville 2", fee: 8000 },
+  { id: "cnc", name: "Khu CNC Hòa Lạc", shortName: "Khu CNC Hòa Lạc", fee: 15000 },
+  { id: "vnu", name: "Đại học Quốc Gia", shortName: "ĐHQG Hòa Lạc", fee: 15000 },
+];
+
+export const DEFAULT_ZONE_ID = "fpt-uni";
+
+export const getZone = (id: string | null | undefined) =>
+  DELIVERY_ZONES.find((z) => z.id === id) ?? DELIVERY_ZONES[0];
+
 export const categories: Category[] = [
   { id: "com", name: "Cơm", icon: "🍚" },
   { id: "bun-pho", name: "Bún - Phở", icon: "🍜" },
@@ -84,17 +122,12 @@ export const categories: Category[] = [
   { id: "chay", name: "Đồ chay", icon: "🥗" },
 ];
 
-const img = (q: string, seed: number) =>
-  `https://images.unsplash.com/photo-${seed}?auto=format&fit=crop&w=800&q=70&sig=${encodeURIComponent(q)}`;
-
-// Curated working Unsplash photo IDs
 const PHOTOS = {
   com: "1546069901-ba9599a7e63c",
   bun: "1569718212165-3a8278d5f624",
   banhMi: "1558030006-450675393462",
   traSua: "1558857563-c0c6ee6ff8bd",
   anVat: "1604908176997-125f25cc6f3d",
-  nem: "1625938145744-e380515399b7",
   shop1: "1552566626-52f8b828add9",
   shop2: "1517248135467-4c7edcad34c4",
   shop3: "1559339352-11d035aa65de",
@@ -117,11 +150,13 @@ export const shops: Shop[] = [
     area: "FPT",
     distanceKm: 0.4,
     isOpen: true,
+    status: "open",
     prepTime: 15,
     categories: ["com", "do-uong"],
     description: "Cơm nhà nấu mỗi ngày, đậm vị quê hương.",
     phone: "0987 654 321",
     openHours: "10:00 - 21:00",
+    supportedZones: ["fpt-uni", "ktx-fpt", "fville-1", "fville-2"],
   },
   {
     id: "bun-bo-co-lan",
@@ -134,11 +169,13 @@ export const shops: Shop[] = [
     area: "Khu CNC Hòa Lạc",
     distanceKm: 1.1,
     isOpen: true,
+    status: "open",
     prepTime: 18,
     categories: ["bun-pho"],
     description: "Bún bò Huế cay nồng chuẩn vị miền Trung.",
     phone: "0912 345 678",
     openHours: "06:30 - 14:00",
+    supportedZones: ["cnc", "fville-1", "fville-2", "fpt-uni"],
   },
   {
     id: "tra-sua-soc-nau",
@@ -151,11 +188,13 @@ export const shops: Shop[] = [
     area: "Đại học Quốc Gia",
     distanceKm: 0.8,
     isOpen: true,
+    status: "open",
     prepTime: 12,
     categories: ["tra-sua", "do-uong"],
     description: "Trà sữa thơm béo, topping đa dạng.",
     phone: "0934 222 111",
     openHours: "08:00 - 22:30",
+    supportedZones: ["vnu", "cnc", "fpt-uni", "ktx-fpt"],
   },
   {
     id: "banh-mi-minh-anh",
@@ -168,11 +207,13 @@ export const shops: Shop[] = [
     area: "FPT",
     distanceKm: 0.3,
     isOpen: false,
+    status: "break",
     prepTime: 8,
     categories: ["banh-mi"],
     description: "Bánh mì giòn rụm, pate nhà làm.",
     phone: "0978 111 222",
     openHours: "06:00 - 11:30",
+    supportedZones: ["fpt-uni", "ktx-fpt"],
   },
   {
     id: "an-vat-campus",
@@ -185,11 +226,13 @@ export const shops: Shop[] = [
     area: "FPT",
     distanceKm: 0.6,
     isOpen: true,
+    status: "open",
     prepTime: 20,
     categories: ["an-vat"],
     description: "Nem chua rán, xúc xích, khoai lắc nóng hổi.",
     phone: "0967 333 444",
     openHours: "15:00 - 23:00",
+    supportedZones: ["fpt-uni", "ktx-fpt", "fville-1"],
   },
 ];
 
@@ -303,27 +346,47 @@ export const products: Product[] = [
 export const vouchers: Voucher[] = [
   {
     id: "v1",
-    code: "HOALAC10",
-    title: "Giảm 10K đơn đầu tiên",
-    description: "Áp dụng cho khách hàng mới",
-    discountText: "-10.000đ",
-    expiry: "31/12/2025",
+    code: "HOALAC5",
+    title: "Giảm 5.000đ đơn đầu tiên",
+    description: "Áp dụng cho đơn từ 30.000đ",
+    discountText: "-5.000đ",
+    discountAmount: 5000,
+    minOrder: 30000,
+    expiry: "30/06/2026",
+    status: "usable",
   },
   {
     id: "v2",
-    code: "FREESHIP",
-    title: "Miễn phí giao hàng",
-    description: "Đơn từ 50.000đ tại quán quanh FPT",
-    discountText: "Free ship",
-    expiry: "30/06/2025",
+    code: "HOALAC10",
+    title: "Giảm 10.000đ cho đơn từ 80.000đ",
+    description: "Áp dụng cho mọi quán quanh Hòa Lạc",
+    discountText: "-10.000đ",
+    discountAmount: 10000,
+    minOrder: 80000,
+    expiry: "31/07/2026",
+    status: "usable",
   },
   {
     id: "v3",
-    code: "TRASUA20",
-    title: "Giảm 20% trà sữa",
-    description: "Áp dụng tại Trà Sữa Sóc Nâu",
-    discountText: "-20%",
-    expiry: "15/05/2025",
+    code: "GIOITHIEU7",
+    title: "Voucher giới thiệu bạn bè",
+    description: "Giảm 7.000đ cho đơn từ 50.000đ",
+    discountText: "-7.000đ",
+    discountAmount: 7000,
+    minOrder: 50000,
+    expiry: "15/08/2026",
+    status: "soon_expire",
+  },
+  {
+    id: "v4",
+    code: "THANTHIET15",
+    title: "Khách thân thiết",
+    description: "Đặt 5 đơn để mở khóa voucher giảm 15.000đ",
+    discountText: "-15.000đ",
+    discountAmount: 15000,
+    minOrder: 0,
+    expiry: "31/12/2026",
+    status: "locked",
   },
 ];
 
@@ -331,6 +394,23 @@ export const getShop = (id: string) => shops.find((s) => s.id === id);
 export const getProduct = (id: string) => products.find((p) => p.id === id);
 export const getProductsByShop = (shopId: string) =>
   products.filter((p) => p.shopId === shopId);
+export const getVoucher = (code: string) =>
+  vouchers.find((v) => v.code.toUpperCase() === code.toUpperCase());
+
+export function voucherStatusFor(v: Voucher, subtotal: number): VoucherStatus {
+  if (v.status !== "usable" && v.status !== "soon_expire") return v.status;
+  if (subtotal < v.minOrder) return "not_eligible";
+  return v.status;
+}
+
+export const VOUCHER_STATUS_LABEL: Record<VoucherStatus, string> = {
+  usable: "Có thể dùng",
+  soon_expire: "Sắp hết hạn",
+  used: "Đã dùng",
+  expired: "Hết hạn",
+  locked: "Chưa mở khóa",
+  not_eligible: "Chưa đủ điều kiện",
+};
 
 export const formatVND = (n: number) =>
   n.toLocaleString("vi-VN") + "đ";
