@@ -1,15 +1,12 @@
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { cartStore } from "@/lib/cart-store";
-import { formatVND, type Product } from "@/lib/mock-data";
+import { useAddCartItem } from "@/lib/api/hooks";
+import type { ProductDto } from "@/lib/api/types";
+import { ApiError, apiErrorMessage } from "@/lib/api/client";
+import { formatVND } from "@/lib/domain";
 import { toast } from "sonner";
 
 export function ProductSheet({
@@ -18,24 +15,53 @@ export function ProductSheet({
   onOpenChange,
   canOrder = true,
 }: {
-  product: Product | null;
+  product: ProductDto | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   canOrder?: boolean;
 }) {
+  const addItem = useAddCartItem();
   const [qty, setQty] = useState(1);
   const [note, setNote] = useState("");
 
-
-
-
   const handleAdd = () => {
     if (!product) return;
-    cartStore.add(product.id, qty, note.trim() || undefined);
-    toast.success(`Đã thêm ${qty} × ${product.name}`);
-    onOpenChange(false);
-    setQty(1);
-    setNote("");
+    addItem.mutate(
+      { productId: product.id, quantity: qty, note: note.trim() || undefined },
+      {
+        onSuccess: () => {
+          toast.success(`Đã thêm ${qty} × ${product.name}`);
+          onOpenChange(false);
+          setQty(1);
+          setNote("");
+        },
+        onError: (error) => {
+          if (
+            error instanceof ApiError &&
+            error.code === "CART_SHOP_CONFLICT" &&
+            window.confirm("Giỏ hiện có món của quán khác. Thay giỏ hàng hiện tại?")
+          ) {
+            addItem.mutate(
+              {
+                productId: product.id,
+                quantity: qty,
+                note: note.trim() || undefined,
+                replaceExistingCart: true,
+              },
+              {
+                onSuccess: () => {
+                  toast.success(`Đã thêm ${qty} × ${product.name}`);
+                  onOpenChange(false);
+                },
+                onError: (nextError) => toast.error(apiErrorMessage(nextError)),
+              },
+            );
+            return;
+          }
+          toast.error(apiErrorMessage(error));
+        },
+      },
+    );
   };
 
   return (
@@ -53,11 +79,7 @@ export function ProductSheet({
         {product && (
           <>
             <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-              <img
-                src={product.image}
-                alt={product.name}
-                className="size-full object-cover"
-              />
+              <img src={product.imageUrl} alt={product.name} className="size-full object-cover" />
               {!product.available && (
                 <div className="absolute inset-0 grid place-items-center bg-foreground/60 text-base font-semibold text-background">
                   Hết món
@@ -67,9 +89,7 @@ export function ProductSheet({
             <div className="space-y-4 px-4 pb-4 pt-4">
               <SheetHeader className="space-y-1 text-left">
                 <SheetTitle className="text-lg">{product.name}</SheetTitle>
-                <p className="text-sm text-muted-foreground">
-                  {product.description}
-                </p>
+                <p className="text-sm text-muted-foreground">{product.description}</p>
               </SheetHeader>
               <div className="flex items-center justify-between">
                 <span className="text-xl font-extrabold text-primary">
@@ -108,7 +128,7 @@ export function ProductSheet({
               <Button
                 className="h-12 w-full rounded-full text-base font-bold"
                 onClick={handleAdd}
-                disabled={!product.available || !canOrder}
+                disabled={!product.available || !canOrder || addItem.isPending}
               >
                 {!product.available
                   ? "Món đã hết"

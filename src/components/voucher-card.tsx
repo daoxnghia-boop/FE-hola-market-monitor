@@ -1,11 +1,6 @@
 import { Ticket } from "lucide-react";
-import {
-  formatVND,
-  voucherStatusFor,
-  VOUCHER_STATUS_LABEL,
-  type Voucher,
-  type VoucherStatus,
-} from "@/lib/mock-data";
+import { formatVND, VOUCHER_STATUS_LABEL } from "@/lib/domain";
+import type { VoucherDto, VoucherStatus } from "@/lib/api/types";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +20,13 @@ export function VoucherCard({
   subtotal = 0,
   active = false,
 }: {
-  voucher: Voucher;
+  voucher: VoucherDto;
   onApply?: () => void;
   compact?: boolean;
   subtotal?: number;
   active?: boolean;
 }) {
-  const status = voucherStatusFor(voucher, subtotal);
+  const status = voucher.status;
   const applyable = status === "usable" || status === "soon_expire";
 
   return (
@@ -45,7 +40,9 @@ export function VoucherCard({
       <div className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 bg-gradient-to-br from-primary to-primary/80 p-3 text-primary-foreground">
         <Ticket className="size-5" />
         <span className="text-center text-xs font-bold leading-tight">
-          {voucher.discountText}
+          {voucher.discountType === "fixed"
+            ? `-${formatVND(voucher.discountValue)}`
+            : `-${voucher.discountValue}%`}
         </span>
       </div>
       <div className="flex min-w-0 flex-1 items-center gap-3 p-3">
@@ -62,18 +59,14 @@ export function VoucherCard({
             </span>
           </div>
           {!compact && (
-            <p className="line-clamp-1 text-xs text-muted-foreground">
-              {voucher.description}
-            </p>
+            <p className="line-clamp-1 text-xs text-muted-foreground">{voucher.description}</p>
           )}
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Đơn tối thiểu {formatVND(voucher.minOrder)} · HSD {voucher.expiry}
+            Đơn tối thiểu {formatVND(voucher.minOrderAmount)} · HSD{" "}
+            {new Intl.DateTimeFormat("vi-VN").format(new Date(voucher.expiresAt))}
           </p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Mã{" "}
-            <span className="font-mono font-semibold text-foreground">
-              {voucher.code}
-            </span>
+            Mã <span className="font-mono font-semibold text-foreground">{voucher.code}</span>
           </p>
         </div>
         {onApply && (

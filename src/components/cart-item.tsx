@@ -1,23 +1,22 @@
 import { useState } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { cartStore, type CartItem as CartItemT } from "@/lib/cart-store";
-import { formatVND, type Product } from "@/lib/mock-data";
+import { useRemoveCartItem, useUpdateCartItem } from "@/lib/api/hooks";
+import type { CartItemDto } from "@/lib/api/types";
+import { apiErrorMessage } from "@/lib/api/client";
+import { formatVND } from "@/lib/domain";
+import { toast } from "sonner";
 
-export function CartItem({
-  item,
-  editable = true,
-}: {
-  item: CartItemT & { product: Product };
-  editable?: boolean;
-}) {
+export function CartItem({ item, editable = true }: { item: CartItemDto; editable?: boolean }) {
+  const updateItem = useUpdateCartItem();
+  const removeItem = useRemoveCartItem();
   const [editingNote, setEditingNote] = useState(false);
   const [note, setNote] = useState(item.note ?? "");
 
   return (
     <div className="flex gap-3 rounded-2xl bg-card p-3 shadow-card">
       <img
-        src={item.product.image}
+        src={item.product.imageUrl}
         alt={item.product.name}
         className="size-20 shrink-0 rounded-xl object-cover"
       />
@@ -26,7 +25,11 @@ export function CartItem({
           <h4 className="line-clamp-1 font-semibold">{item.product.name}</h4>
           {editable && (
             <button
-              onClick={() => cartStore.remove(item.productId)}
+              onClick={() =>
+                removeItem.mutate(item.id, {
+                  onError: (error) => toast.error(apiErrorMessage(error)),
+                })
+              }
               className="text-muted-foreground hover:text-destructive"
               aria-label="Xóa"
             >
@@ -58,7 +61,10 @@ export function CartItem({
               className="h-7 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-xs outline-none focus:border-primary"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  cartStore.setNote(item.productId, note.trim());
+                  updateItem.mutate(
+                    { itemId: item.id, note: note.trim() },
+                    { onError: (error) => toast.error(apiErrorMessage(error)) },
+                  );
                   setEditingNote(false);
                 }
               }}
@@ -68,7 +74,10 @@ export function CartItem({
               variant="secondary"
               className="h-7 px-2 text-xs"
               onClick={() => {
-                cartStore.setNote(item.productId, note.trim());
+                updateItem.mutate(
+                  { itemId: item.id, note: note.trim() },
+                  { onError: (error) => toast.error(apiErrorMessage(error)) },
+                );
                 setEditingNote(false);
               }}
             >
@@ -86,27 +95,33 @@ export function CartItem({
                 size="icon"
                 variant="ghost"
                 className="size-7 rounded-full"
-                onClick={() => cartStore.setQty(item.productId, item.quantity - 1)}
+                onClick={() =>
+                  updateItem.mutate(
+                    { itemId: item.id, quantity: item.quantity - 1 },
+                    { onError: (error) => toast.error(apiErrorMessage(error)) },
+                  )
+                }
               >
                 <Minus />
               </Button>
-              <span className="w-6 text-center text-sm font-semibold">
-                {item.quantity}
-              </span>
+              <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
               <Button
                 size="icon"
                 variant="ghost"
                 className="size-7 rounded-full"
-                onClick={() => cartStore.setQty(item.productId, item.quantity + 1)}
+                onClick={() =>
+                  updateItem.mutate(
+                    { itemId: item.id, quantity: item.quantity + 1 },
+                    { onError: (error) => toast.error(apiErrorMessage(error)) },
+                  )
+                }
               >
                 <Plus />
               </Button>
             </div>
           )}
           {!editable && (
-            <span className="text-sm font-semibold text-muted-foreground">
-              × {item.quantity}
-            </span>
+            <span className="text-sm font-semibold text-muted-foreground">× {item.quantity}</span>
           )}
         </div>
       </div>

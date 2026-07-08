@@ -5,13 +5,15 @@ import { CategoryTabs } from "@/components/category-tabs";
 import { ShopCard } from "@/components/shop-card";
 import { ProductCard } from "@/components/product-card";
 import { EmptyState } from "@/components/empty-state";
-import { shops, products } from "@/lib/mock-data";
+import { useProducts, useSearch, useShops } from "@/lib/api/hooks";
+import { useDeliveryZone } from "@/lib/cart-store";
 import { useEffect, useState } from "react";
 import { Search as SearchIcon } from "lucide-react";
 
 export const Route = createFileRoute("/search")({
   validateSearch: (search: Record<string, unknown>) => ({
     q: typeof search.q === "string" ? search.q : "",
+    categoryId: typeof search.categoryId === "string" ? search.categoryId : "all",
   }),
   head: () => ({
     meta: [{ title: "Tìm kiếm — Ăn Hòa Lạc" }],
@@ -20,33 +22,50 @@ export const Route = createFileRoute("/search")({
 });
 
 function SearchPage() {
-  const { q: initialQ } = Route.useSearch();
+  const { q: initialQ, categoryId } = Route.useSearch();
   const navigate = useNavigate({ from: "/search" });
   const [q, setQ] = useState(initialQ ?? "");
   const [tab, setTab] = useState<"all" | "products" | "shops">("all");
+  const zone = useDeliveryZone();
 
   useEffect(() => {
     setQ(initialQ ?? "");
   }, [initialQ]);
 
   const ql = q.trim().toLowerCase();
-  const matchedShops = ql
-    ? shops.filter(
-        (s) =>
-          s.name.toLowerCase().includes(ql) ||
-          s.description?.toLowerCase().includes(ql),
-      )
-    : shops;
+  const params = {
+    q: ql,
+    type: tab,
+    categoryId: categoryId === "all" ? undefined : categoryId,
+    deliveryZoneId: zone?.id,
+    pageSize: 20,
+  };
+  const searchQuery = useSearch(params, Boolean(ql));
+  const defaultShops = useShops({
+    categoryId: categoryId === "all" ? undefined : categoryId,
+    deliveryZoneId: zone?.id,
+    pageSize: 20,
+  });
+  const defaultProducts = useProducts({
+    categoryId: categoryId === "all" ? undefined : categoryId,
+    deliveryZoneId: zone?.id,
+    pageSize: 8,
+  });
+  const matchedShops = ql ? (searchQuery.data?.shops.items ?? []) : (defaultShops.data ?? []);
   const matchedProducts = ql
-    ? products.filter((p) => p.name.toLowerCase().includes(ql))
-    : products.slice(0, 8);
+    ? (searchQuery.data?.products.items ?? [])
+    : (defaultProducts.data ?? []);
+  const isLoading = ql
+    ? searchQuery.isLoading
+    : defaultShops.isLoading || defaultProducts.isLoading;
+  const isError = ql ? searchQuery.isError : defaultShops.isError || defaultProducts.isError;
 
   const showShops = tab === "all" || tab === "shops";
   const showProducts = tab === "all" || tab === "products";
   const isEmpty = ql && matchedShops.length === 0 && matchedProducts.length === 0;
 
   const submitSearch = () => {
-    navigate({ search: { q: q.trim() }, replace: true });
+    navigate({ search: { q: q.trim(), categoryId }, replace: true });
   };
 
   return (
@@ -87,9 +106,21 @@ function SearchPage() {
           ))}
         </div>
 
-        <CategoryTabs variant="pills" />
+        <CategoryTabs
+          value={categoryId}
+          variant="pills"
+          onChange={(nextCategory) =>
+            navigate({ search: { q: q.trim(), categoryId: nextCategory }, replace: true })
+          }
+        />
 
-        {isEmpty ? (
+        {isLoading ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Đang tìm món và quán...</p>
+        ) : isError ? (
+          <p className="py-8 text-center text-sm text-destructive">
+            Chưa thể tải kết quả tìm kiếm.
+          </p>
+        ) : isEmpty ? (
           <EmptyState
             icon={<SearchIcon className="size-6" />}
             title="Không tìm thấy kết quả"

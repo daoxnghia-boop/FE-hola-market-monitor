@@ -2,12 +2,14 @@ import { Link } from "@tanstack/react-router";
 import { Clock, Heart, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { RatingStars } from "./rating-stars";
-import type { Shop } from "@/lib/mock-data";
+import type { ShopDto } from "@/lib/api/types";
+import { apiErrorMessage } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
-import { favoritesStore, useIsFavorite } from "@/lib/favorites-store";
+import { useFavoriteActions, useIsFavorite } from "@/lib/favorites-store";
 
-export function ShopCard({ shop, supported = true }: { shop: Shop; supported?: boolean }) {
+export function ShopCard({ shop, supported = true }: { shop: ShopDto; supported?: boolean }) {
   const fav = useIsFavorite(shop.id);
+  const favoriteAction = useFavoriteActions();
 
   const statusLabel =
     shop.status === "out_of_menu"
@@ -25,7 +27,7 @@ export function ShopCard({ shop, supported = true }: { shop: Shop; supported?: b
     >
       <div className="relative aspect-[16/9] overflow-hidden bg-muted">
         <img
-          src={shop.cover}
+          src={shop.coverUrl}
           alt={shop.name}
           loading="lazy"
           className="size-full object-cover transition group-hover:scale-105"
@@ -33,9 +35,7 @@ export function ShopCard({ shop, supported = true }: { shop: Shop; supported?: b
         <span
           className={cn(
             "absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold backdrop-blur",
-            statusOk
-              ? "bg-success/90 text-success-foreground"
-              : "bg-foreground/70 text-background",
+            statusOk ? "bg-success/90 text-success-foreground" : "bg-foreground/70 text-background",
           )}
         >
           <span className="size-1.5 rounded-full bg-current" />
@@ -47,8 +47,13 @@ export function ShopCard({ shop, supported = true }: { shop: Shop; supported?: b
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            favoritesStore.toggle(shop.id);
-            toast.success(fav ? "Đã bỏ lưu quán" : "Đã lưu quán yêu thích");
+            favoriteAction.mutate(
+              { shopId: shop.id, favorite: fav },
+              {
+                onSuccess: () => toast.success(fav ? "Đã bỏ lưu quán" : "Đã lưu quán yêu thích"),
+                onError: (error) => toast.error(apiErrorMessage(error)),
+              },
+            );
           }}
           className="absolute right-3 top-3 grid size-8 place-items-center rounded-full bg-card/90 backdrop-blur transition hover:scale-105"
         >
@@ -73,11 +78,12 @@ export function ShopCard({ shop, supported = true }: { shop: Shop; supported?: b
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <Clock className="size-3.5" />
-            {shop.prepTime} phút
+            {shop.prepTimeMinutes} phút
           </span>
           <span className="inline-flex items-center gap-1">
             <MapPin className="size-3.5" />
-            {shop.distanceKm} km · {shop.area}
+            {shop.distanceKm != null ? `${shop.distanceKm} km · ` : ""}
+            {shop.area}
           </span>
         </div>
       </div>

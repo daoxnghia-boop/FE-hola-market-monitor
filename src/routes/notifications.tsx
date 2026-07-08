@@ -4,14 +4,17 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState } from "@/components/empty-state";
 import {
-  markAllRead,
-  markRead,
   useNotifications,
+  useNotificationsState,
   useUnreadCount,
+  useMarkRead,
+  useMarkAllRead,
   type AppNotification,
   type NotificationType,
 } from "@/lib/notifications-store";
 import { cn } from "@/lib/utils";
+import { apiErrorMessage } from "@/lib/api/client";
+import { formatRelativeTime } from "@/lib/domain";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
@@ -39,23 +42,28 @@ const ICON_BG: Record<NotificationType, string> = {
 
 function NotificationsPage() {
   const list = useNotifications();
+  const state = useNotificationsState();
   const unread = useUnreadCount();
+  const markRead = useMarkRead();
+  const markAllRead = useMarkAllRead();
   const navigate = useNavigate();
 
   const handleClick = (n: AppNotification) => {
-    if (!n.read) markRead(n.id);
-    if (n.type === "order" && n.orderId) {
-      navigate({ to: "/orders/$orderId", params: { orderId: n.orderId } });
-    } else if (n.type === "voucher") {
+    if (!n.readAt) markRead.mutate(n.id);
+    if (n.target?.type === "order" && n.target.id) {
+      navigate({ to: "/orders/$orderId", params: { orderId: n.target.id } });
+    } else if (n.target?.type === "voucher" || n.type === "voucher") {
       navigate({ to: "/vouchers" });
-    } else if (n.type === "shop" && n.shopId) {
-      navigate({ to: "/shops/$shopId", params: { shopId: n.shopId } });
+    } else if (n.target?.type === "shop" && n.target.id) {
+      navigate({ to: "/shops/$shopId", params: { shopId: n.target.id } });
     }
   };
 
   const handleMarkAll = () => {
-    markAllRead();
-    toast.success("Đã đánh dấu tất cả thông báo là đã đọc");
+    markAllRead.mutate(undefined, {
+      onSuccess: () => toast.success("Đã đánh dấu tất cả thông báo là đã đọc"),
+      onError: (error) => toast.error(apiErrorMessage(error)),
+    });
   };
 
   return (
@@ -80,7 +88,11 @@ function NotificationsPage() {
         )}
       </header>
 
-      {list.length === 0 ? (
+      {state.isLoading ? (
+        <div className="px-4 pt-6 text-sm text-muted-foreground">Đang tải thông báo...</div>
+      ) : state.isError ? (
+        <div className="px-4 pt-6 text-sm text-destructive">Chưa thể tải thông báo.</div>
+      ) : list.length === 0 ? (
         <div className="px-4 pt-6">
           <EmptyState
             icon={<Bell className="size-6" />}
@@ -98,7 +110,7 @@ function NotificationsPage() {
                   onClick={() => handleClick(n)}
                   className={cn(
                     "flex w-full items-start gap-3 rounded-xl p-3 text-left transition hover:bg-accent/50",
-                    !n.read && "bg-primary/5",
+                    !n.readAt && "bg-primary/5",
                   )}
                 >
                   <span
@@ -111,15 +123,25 @@ function NotificationsPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">
-                      <p className={cn("min-w-0 flex-1 text-sm", !n.read ? "font-semibold" : "font-medium text-foreground/90")}>
+                      <p
+                        className={cn(
+                          "min-w-0 flex-1 text-sm",
+                          !n.readAt ? "font-semibold" : "font-medium text-foreground/90",
+                        )}
+                      >
                         {n.title}
                       </p>
-                      {!n.read && (
-                        <span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" aria-label="Chưa đọc" />
+                      {!n.readAt && (
+                        <span
+                          className="mt-1.5 size-2 shrink-0 rounded-full bg-primary"
+                          aria-label="Chưa đọc"
+                        />
                       )}
                     </div>
                     <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{n.timeText}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {formatRelativeTime(n.createdAt)}
+                    </p>
                   </div>
                 </button>
               </li>

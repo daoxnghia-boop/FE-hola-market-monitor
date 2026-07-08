@@ -6,13 +6,15 @@ import { EmptyState } from "@/components/empty-state";
 import { VoucherCard } from "@/components/voucher-card";
 import { ZonePicker } from "@/components/zone-picker";
 import { Button } from "@/components/ui/button";
+import { useCart, useCartItems, useCartPricing } from "@/lib/cart-store";
+import { formatVND } from "@/lib/domain";
 import {
-  cartStore,
-  useCart,
-  useCartItems,
-  useCartPricing,
-} from "@/lib/cart-store";
-import { formatVND, getShop, vouchers, voucherStatusFor } from "@/lib/mock-data";
+  useCartQuery,
+  useRemoveCartVoucher,
+  useSetCartVoucher,
+  useVouchers,
+} from "@/lib/api/hooks";
+import { apiErrorMessage } from "@/lib/api/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/cart")({
@@ -29,10 +31,30 @@ function CartPage() {
   const cart = useCart();
   const items = useCartItems();
   const pricing = useCartPricing();
+  const cartQuery = useCartQuery();
+  const voucherQuery = useVouchers({ shopId: cart.shop?.id, cartSubtotal: pricing.subtotal });
+  const setVoucher = useSetCartVoucher();
+  const removeVoucher = useRemoveCartVoucher();
+  const vouchers = voucherQuery.data ?? [];
   const navigate = useNavigate();
 
-  const shop = cart.shopId ? getShop(cart.shopId) : null;
-  const supported = shop ? shop.supportedZones.includes(pricing.zone.id) : true;
+  const shop = cart.shop;
+  const supported = shop?.delivery?.supported ?? !cart.blockingReasons.includes("ZONE_UNSUPPORTED");
+
+  if (cartQuery.isLoading)
+    return (
+      <AppShell>
+        <PageHeader title="Giỏ hàng" />
+        <div className="px-4 text-sm text-muted-foreground">Đang tải giỏ hàng...</div>
+      </AppShell>
+    );
+  if (cartQuery.isError)
+    return (
+      <AppShell>
+        <PageHeader title="Giỏ hàng" />
+        <div className="px-4 text-sm text-destructive">Chưa thể tải giỏ hàng.</div>
+      </AppShell>
+    );
 
   if (items.length === 0 || !shop) {
     return (
@@ -75,20 +97,18 @@ function CartPage() {
             params={{ shopId: shop.id }}
             className="flex items-center gap-3 rounded-2xl bg-card p-3 shadow-card"
           >
-            <img src={shop.logo} alt="" className="size-12 rounded-xl object-cover" />
+            <img src={shop.logoUrl} alt="" className="size-12 rounded-xl object-cover" />
             <div className="min-w-0 flex-1">
               <div className="truncate font-semibold">{shop.name}</div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span
                   className={
-                    shop.status === "open" && shop.isOpen
-                      ? "text-success"
-                      : "text-muted-foreground"
+                    shop.status === "open" && shop.isOpen ? "text-success" : "text-muted-foreground"
                   }
                 >
                   ● {shop.status === "open" && shop.isOpen ? "Đang mở" : "Tạm nghỉ"}
                 </span>
-                <span>• Dự kiến ~{shop.prepTime} phút</span>
+                <span>• Dự kiến ~{shop.prepTimeMinutes} phút</span>
               </div>
             </div>
             <ChevronRight className="size-4 text-muted-foreground" />
@@ -103,7 +123,9 @@ function CartPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs text-muted-foreground">Giao đến</div>
-                  <div className="truncate font-semibold">{pricing.zone.name}</div>
+                  <div className="truncate font-semibold">
+                    {pricing.zone?.name || "Chọn khu giao hàng"}
+                  </div>
                 </div>
                 <span className="text-xs font-semibold text-primary">Đổi</span>
               </button>
@@ -112,8 +134,8 @@ function CartPage() {
 
           {!supported && (
             <div className="rounded-2xl bg-warning/10 p-3 text-sm text-warning">
-              Quán chưa hỗ trợ giao tới <b>{pricing.zone.name}</b>. Vui lòng đổi khu giao
-              hoặc chọn quán khác.
+              Quán chưa hỗ trợ giao tới <b>{pricing.zone?.name || "khu đã chọn"}</b>. Vui lòng đổi
+              khu giao hoặc chọn quán khác.
             </div>
           )}
 
@@ -131,9 +153,9 @@ function CartPage() {
             </h3>
             <div className="space-y-2">
               {vouchers.map((v) => {
-                const status = voucherStatusFor(v, pricing.subtotal);
+                const status = v.status;
                 const usable = status === "usable" || status === "soon_expire";
-                const active = cart.voucherCode === v.code;
+                const active = cart.voucher?.code === v.code;
                 return (
                   <VoucherCard
                     key={v.id}
@@ -142,8 +164,10 @@ function CartPage() {
                     active={active}
                     onApply={() => {
                       if (active) {
-                        cartStore.setVoucher(null);
-                        toast.success("Đã bỏ áp dụng voucher");
+                        removeVoucher.mutate(undefined, {
+                          onSuccess: () => toast.success("Đã bỏ áp dụng voucher"),
+                          onError: (error) => toast.error(apiErrorMessage(error)),
+                        });
                         return;
                       }
                       if (!usable) {
@@ -154,8 +178,10 @@ function CartPage() {
                         );
                         return;
                       }
-                      cartStore.setVoucher(v.code);
-                      toast.success("Đã áp dụng voucher");
+                      setVoucher.mutate(v.code, {
+                        onSuccess: () => toast.success("Đã áp dụng voucher"),
+                        onError: (error) => toast.error(apiErrorMessage(error)),
+                      });
                     }}
                   />
                 );

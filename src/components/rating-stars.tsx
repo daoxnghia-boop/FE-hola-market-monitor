@@ -14,11 +14,8 @@ export function RatingStars({
 }) {
   return (
     <span className={cn("inline-flex items-center gap-1 text-sm", className)}>
-      <Star
-        className="fill-warning text-warning"
-        style={{ width: size, height: size }}
-      />
-      {showValue && <span className="font-semibold">{value.toFixed(1)}</span>}
+      <Star className="fill-warning text-warning" style={{ width: size, height: size }} />
+      {showValue && <span className="font-semibold">{Number(value || 0).toFixed(1)}</span>}
     </span>
   );
 }

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { MapPin, ChevronRight, TrendingUp, Sparkles, Bell, Heart, Repeat } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -10,9 +10,15 @@ import { ProductSheet } from "@/components/product-sheet";
 import { VoucherCard } from "@/components/voucher-card";
 import { BottomCartBar } from "@/components/bottom-cart-bar";
 import { ZonePicker } from "@/components/zone-picker";
-import { shops, products, vouchers, type Product } from "@/lib/mock-data";
+import type { ProductDto } from "@/lib/api/types";
+import {
+  useFavoriteShops,
+  useFrequentProducts,
+  usePopularProducts,
+  useShops,
+  useVouchers,
+} from "@/lib/api/hooks";
 import { useDeliveryZone } from "@/lib/cart-store";
-import { useFavorites } from "@/lib/favorites-store";
 import { useUnreadCount } from "@/lib/notifications-store";
 
 export const Route = createFileRoute("/")({
@@ -30,24 +36,26 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
-  const [, setCategory] = useState<string>("all");
+  const navigate = useNavigate();
   const unread = useUnreadCount();
   const zone = useDeliveryZone();
-  const favShops = useFavorites();
+  const zoneId = zone?.id;
+  const nearbyQuery = useShops({ deliveryZoneId: zoneId, sort: "distance", pageSize: 4 });
+  const newShopsQuery = useShops({ deliveryZoneId: zoneId, sort: "newest", pageSize: 3 });
+  const popularQuery = usePopularProducts(zoneId);
+  const frequentQuery = useFrequentProducts(zoneId);
+  const favoriteQuery = useFavoriteShops(zoneId);
+  const voucherQuery = useVouchers({ pageSize: 10 });
+  const nearby = nearbyQuery.data ?? [];
+  const newShops = newShopsQuery.data ?? [];
+  const popular = popularQuery.data ?? [];
+  const frequentProducts = frequentQuery.data ?? [];
+  const favoriteShops = favoriteQuery.data ?? [];
+  const vouchers = voucherQuery.data ?? [];
 
-  const popular = [...products].sort((a, b) => b.soldCount - a.soldCount).slice(0, 6);
-  const nearby = [...shops]
-    .sort((a, b) => a.distanceKm - b.distanceKm)
-    .slice(0, 4);
-  const favoriteShops = shops.filter((s) => favShops.includes(s.id)).slice(0, 4);
-  const frequentProducts = [...products]
-    .filter((p) => p.available)
-    .sort((a, b) => b.rating - a.rating)
-    .slice(0, 4);
-
-  const [selected, setSelected] = useState<Product | null>(null);
+  const [selected, setSelected] = useState<ProductDto | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const openProduct = (p: Product) => {
+  const openProduct = (p: ProductDto) => {
     setSelected(p);
     setSheetOpen(true);
   };
@@ -65,7 +73,7 @@ function HomePage() {
                   <ChevronRight className="size-3" />
                 </div>
                 <div className="truncate text-sm font-semibold underline-offset-2 hover:underline">
-                  {zone.name}, Hòa Lạc
+                  {zone?.name || "Chọn khu giao hàng"}
                 </div>
               </button>
             }
@@ -98,7 +106,11 @@ function HomePage() {
       </section>
 
       <section className="mt-6 px-4">
-        <CategoryTabs onChange={setCategory} />
+        <CategoryTabs
+          onChange={(categoryId) =>
+            navigate({ to: "/search", search: { q: "", categoryId } as never })
+          }
+        />
       </section>
 
       <section className="mt-6 px-4">
@@ -108,6 +120,9 @@ function HomePage() {
           to="/vouchers"
         />
         <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {voucherQuery.isLoading && (
+            <p className="text-sm text-muted-foreground">Đang tải ưu đãi...</p>
+          )}
           {vouchers.map((v) => (
             <div key={v.id} className="w-[280px] shrink-0">
               <VoucherCard voucher={v} compact />
@@ -117,28 +132,29 @@ function HomePage() {
       </section>
 
       <section className="mt-8 px-4">
-        <SectionHeader
-          icon={<MapPin className="size-4" />}
-          title="Quán gần bạn"
-          to="/search"
-        />
+        <SectionHeader icon={<MapPin className="size-4" />} title="Quán gần bạn" to="/search" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {nearbyQuery.isLoading && (
+            <p className="text-sm text-muted-foreground">Đang tải quán gần bạn...</p>
+          )}
+          {nearbyQuery.isError && (
+            <p className="text-sm text-destructive">Chưa thể tải danh sách quán.</p>
+          )}
+          {!nearbyQuery.isLoading && !nearbyQuery.isError && nearby.length === 0 && (
+            <p className="text-sm text-muted-foreground">Chưa có quán giao tới khu này.</p>
+          )}
           {nearby.map((s) => (
-            <ShopCard
-              key={s.id}
-              shop={s}
-              supported={s.supportedZones.includes(zone.id)}
-            />
+            <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
           ))}
         </div>
       </section>
 
       <section className="mt-8 px-4">
-        <SectionHeader
-          icon={<Repeat className="size-4" />}
-          title="Món bạn hay đặt"
-        />
+        <SectionHeader icon={<Repeat className="size-4" />} title="Món bạn hay đặt" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {frequentQuery.isLoading && (
+            <p className="text-sm text-muted-foreground">Đang tải gợi ý...</p>
+          )}
           {frequentProducts.map((p) => (
             <ProductCard key={p.id} product={p} onSelect={openProduct} />
           ))}
@@ -147,17 +163,10 @@ function HomePage() {
 
       {favoriteShops.length > 0 && (
         <section className="mt-8 px-4">
-          <SectionHeader
-            icon={<Heart className="size-4" />}
-            title="Quán bạn yêu thích"
-          />
+          <SectionHeader icon={<Heart className="size-4" />} title="Quán bạn yêu thích" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {favoriteShops.map((s) => (
-              <ShopCard
-                key={s.id}
-                shop={s}
-                supported={s.supportedZones.includes(zone.id)}
-              />
+              <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
             ))}
           </div>
         </section>
@@ -170,6 +179,15 @@ function HomePage() {
           to="/search"
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {popularQuery.isLoading && (
+            <p className="text-sm text-muted-foreground">Đang tải món phổ biến...</p>
+          )}
+          {popularQuery.isError && (
+            <p className="text-sm text-destructive">Chưa thể tải món phổ biến.</p>
+          )}
+          {!popularQuery.isLoading && !popularQuery.isError && popular.length === 0 && (
+            <p className="text-sm text-muted-foreground">Chưa có món phổ biến.</p>
+          )}
           {popular.map((p) => (
             <ProductCard key={p.id} product={p} onSelect={openProduct} />
           ))}
@@ -179,21 +197,16 @@ function HomePage() {
       <section className="mt-8 px-4 pb-32 md:pb-12">
         <SectionHeader title="Quán mới nổi" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {shops.slice(1, 4).map((s) => (
-            <ShopCard
-              key={s.id}
-              shop={s}
-              supported={s.supportedZones.includes(zone.id)}
-            />
+          {newShopsQuery.isLoading && (
+            <p className="text-sm text-muted-foreground">Đang tải quán mới...</p>
+          )}
+          {newShops.map((s) => (
+            <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
           ))}
         </div>
       </section>
 
-      <ProductSheet
-        product={selected}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-      />
+      <ProductSheet product={selected} open={sheetOpen} onOpenChange={setSheetOpen} />
       <BottomCartBar />
     </AppShell>
   );

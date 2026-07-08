@@ -1,5 +1,5 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ArrowLeft,
   Clock,
@@ -18,29 +18,21 @@ import { ProductSheet } from "@/components/product-sheet";
 import { BottomCartBar } from "@/components/bottom-cart-bar";
 import { ZonePicker } from "@/components/zone-picker";
 import { RatingStars } from "@/components/rating-stars";
-import {
-  categories,
-  formatVND,
-  getProductsByShop,
-  getShop,
-  type Product,
-} from "@/lib/mock-data";
+import { formatVND } from "@/lib/domain";
+import type { ProductDto } from "@/lib/api/types";
+import { useCategories, useShop, useShopProducts } from "@/lib/api/hooks";
+import { apiErrorMessage } from "@/lib/api/client";
 import { useDeliveryZone } from "@/lib/cart-store";
-import { favoritesStore, useIsFavorite } from "@/lib/favorites-store";
+import { useFavoriteActions, useIsFavorite } from "@/lib/favorites-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/shops/$shopId")({
-  loader: ({ params }) => {
-    const shop = getShop(params.shopId);
-    if (!shop) throw notFound();
-    return { shop };
-  },
-  head: ({ loaderData }) => ({
+  head: () => ({
     meta: [
-      { title: `${loaderData?.shop.name ?? "Quán ăn"} — Ăn Hòa Lạc` },
+      { title: "Quán ăn — Ăn Hòa Lạc" },
       {
         name: "description",
-        content: loaderData?.shop.description ?? "Thực đơn quán ăn quanh Hòa Lạc.",
+        content: "Thực đơn quán ăn quanh Hòa Lạc.",
       },
     ],
   }),
@@ -48,28 +40,47 @@ export const Route = createFileRoute("/shops/$shopId")({
 });
 
 function ShopDetailPage() {
-  const { shop } = Route.useLoaderData();
-  const allProducts = useMemo(() => getProductsByShop(shop.id), [shop.id]);
-  const productCats = useMemo(() => {
-    const ids = Array.from(new Set(allProducts.map((p) => p.category)));
-    return categories.filter((c) => ids.includes(c.id));
-  }, [allProducts]);
-
+  const { shopId } = Route.useParams();
   const [activeCat, setActiveCat] = useState<string>("all");
-  const filtered =
-    activeCat === "all"
-      ? allProducts
-      : allProducts.filter((p) => p.category === activeCat);
-
   const zone = useDeliveryZone();
-  const supported = shop.supportedZones.includes(zone.id);
+  const shopQuery = useShop(shopId, zone?.id);
+  const productsQuery = useShopProducts(shopId, {
+    categoryId: activeCat === "all" ? undefined : activeCat,
+    pageSize: 100,
+  });
+  const categoriesQuery = useCategories();
+  const fav = useIsFavorite(shopId);
+  const favoriteAction = useFavoriteActions();
+  const [selected, setSelected] = useState<ProductDto | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const shop = shopQuery.data;
+  const allProducts = productsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
+  const productCats = categories.filter((category) => shop?.categoryIds.includes(category.id));
+
+  const filtered = allProducts;
+
+  const supported =
+    shop?.delivery?.supported ?? (zone ? shop?.supportedZoneIds.includes(zone.id) : true);
+  if (shopQuery.isLoading)
+    return (
+      <AppShell>
+        <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+          Đang tải thông tin quán...
+        </div>
+      </AppShell>
+    );
+  if (shopQuery.isError || !shop)
+    return (
+      <AppShell>
+        <div className="px-4 py-10 text-center text-sm text-destructive">
+          Không tìm thấy quán hoặc chưa thể kết nối máy chủ.
+        </div>
+      </AppShell>
+    );
   const shopOpen = shop.status === "open" && shop.isOpen;
   const canOrder = shopOpen && supported;
-  const fav = useIsFavorite(shop.id);
-
-  const [selected, setSelected] = useState<Product | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const openProduct = (p: Product) => {
+  const openProduct = (p: ProductDto) => {
     setSelected(p);
     setSheetOpen(true);
   };
@@ -93,14 +104,17 @@ function ShopDetailPage() {
         >
           <ArrowLeft className="size-5" />
         </Link>
-        <h2 className="min-w-0 flex-1 truncate text-center text-sm font-semibold">
-          {shop.name}
-        </h2>
+        <h2 className="min-w-0 flex-1 truncate text-center text-sm font-semibold">{shop.name}</h2>
         <button
           aria-label="Yêu thích"
           onClick={() => {
-            favoritesStore.toggle(shop.id);
-            toast.success(fav ? "Đã bỏ lưu quán" : "Đã lưu quán yêu thích");
+            favoriteAction.mutate(
+              { shopId: shop.id, favorite: fav },
+              {
+                onSuccess: () => toast.success(fav ? "Đã bỏ lưu quán" : "Đã lưu quán yêu thích"),
+                onError: (error) => toast.error(apiErrorMessage(error)),
+              },
+            );
           }}
           className="grid size-10 place-items-center rounded-full bg-card shadow-card"
         >
@@ -117,7 +131,7 @@ function ShopDetailPage() {
 
       {/* Cover */}
       <div className="relative h-44 w-full overflow-hidden sm:h-56 md:h-72 md:rounded-b-3xl">
-        <img src={shop.cover} alt={shop.name} className="size-full object-cover" />
+        <img src={shop.coverUrl} alt={shop.name} className="size-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/40 to-transparent" />
       </div>
 
@@ -126,7 +140,7 @@ function ShopDetailPage() {
         <div className="rounded-2xl bg-card p-4 shadow-card">
           <div className="flex items-start gap-3">
             <img
-              src={shop.logo}
+              src={shop.logoUrl}
               alt=""
               className="size-14 shrink-0 rounded-xl border-2 border-card object-cover shadow-card"
             />
@@ -138,9 +152,7 @@ function ShopDetailPage() {
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                    shopOpen
-                      ? "bg-success/15 text-success"
-                      : "bg-muted text-muted-foreground",
+                    shopOpen ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
                   )}
                 >
                   <span className="size-1.5 rounded-full bg-current" />
@@ -151,9 +163,7 @@ function ShopDetailPage() {
                       : "Tạm nghỉ"}
                 </span>
               </div>
-              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                {shop.description}
-              </p>
+              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{shop.description}</p>
             </div>
           </div>
 
@@ -161,14 +171,14 @@ function ShopDetailPage() {
             <InfoChip icon={<RatingStars value={shop.rating} />}>
               {shop.reviewCount} đánh giá
             </InfoChip>
-            <InfoChip icon={<Clock className="size-3.5" />}>
-              ~{shop.prepTime} phút
-            </InfoChip>
+            <InfoChip icon={<Clock className="size-3.5" />}>~{shop.prepTimeMinutes} phút</InfoChip>
             <InfoChip icon={<MapPin className="size-3.5" />}>
-              {shop.distanceKm} km
+              {shop.distanceKm != null ? `${shop.distanceKm} km` : "Chưa xác định"}
             </InfoChip>
             <InfoChip icon={<Bike className="size-3.5" />}>
-              {supported ? `Ship ${formatVND(zone.fee)}` : "Chưa hỗ trợ khu này"}
+              {supported
+                ? `Ship ${formatVND(shop.delivery?.fee ?? zone?.baseDeliveryFee ?? 0)}`
+                : "Chưa hỗ trợ khu này"}
             </InfoChip>
           </div>
 
@@ -179,7 +189,10 @@ function ShopDetailPage() {
                   <MapPin className="size-3.5" /> Giao tới
                 </span>
                 <span className="truncate font-semibold text-foreground">
-                  {zone.shortName} · {supported ? formatVND(zone.fee) : "Chưa giao"}
+                  {zone?.shortName || "Chọn khu"} ·{" "}
+                  {supported
+                    ? formatVND(shop.delivery?.fee ?? zone?.baseDeliveryFee ?? 0)
+                    : "Chưa giao"}
                 </span>
               </button>
             }
@@ -187,7 +200,12 @@ function ShopDetailPage() {
 
           <div className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
             <p>📍 {shop.address}</p>
-            <p>🕒 {shop.openHours} · Dự kiến 15–25 phút</p>
+            <p>
+              🕒 {shop.openHoursText}
+              {shop.estimatedDeliveryMinutes
+                ? ` · Dự kiến ${shop.estimatedDeliveryMinutes} phút`
+                : ""}
+            </p>
             <p className="inline-flex items-center gap-1">
               <Phone className="size-3.5" /> {shop.phone}
             </p>
@@ -206,7 +224,7 @@ function ShopDetailPage() {
         {shopOpen && !supported && (
           <div className="mt-3 flex items-center gap-2 rounded-2xl bg-warning/10 p-3 text-sm text-warning">
             <AlertCircle className="size-4 shrink-0" />
-            Quán chưa hỗ trợ giao tới {zone.shortName}. Hãy đổi khu để đặt món.
+            Quán chưa hỗ trợ giao tới {zone?.shortName || "khu này"}. Hãy đổi khu để đặt món.
           </div>
         )}
       </div>
@@ -227,7 +245,7 @@ function ShopDetailPage() {
                     : "border-border bg-card hover:border-primary/40",
                 )}
               >
-                <span className="mr-1">{c.icon}</span>
+                <span className="mr-1">{"icon" in c ? c.icon : c.iconText || "🍽️"}</span>
                 {c.name}
               </button>
             );
@@ -237,7 +255,15 @@ function ShopDetailPage() {
 
       {/* Menu */}
       <section className="space-y-3 px-4 pb-36 pt-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 md:pb-24">
-        {filtered.length === 0 ? (
+        {productsQuery.isLoading ? (
+          <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card md:col-span-2">
+            Đang tải thực đơn...
+          </p>
+        ) : productsQuery.isError ? (
+          <p className="rounded-2xl bg-card p-6 text-center text-sm text-destructive shadow-card md:col-span-2">
+            Chưa thể tải thực đơn.
+          </p>
+        ) : filtered.length === 0 ? (
           <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card md:col-span-2">
             Chưa có món trong nhóm này.
           </p>
@@ -266,13 +292,7 @@ function ShopDetailPage() {
   );
 }
 
-function InfoChip({
-  icon,
-  children,
-}: {
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function InfoChip({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-xl bg-muted px-2.5 py-1.5 text-muted-foreground">
       {icon}

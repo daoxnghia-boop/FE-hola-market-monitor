@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Bike,
@@ -15,20 +14,9 @@ import { AppShell } from "@/components/app-shell";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { OrderTimeline } from "@/components/order-timeline";
 import { Button } from "@/components/ui/button";
-import {
-  ORDER_STATUS_FLOW,
-  formatVND,
-  getShop,
-  products,
-  type OrderStatus,
-} from "@/lib/mock-data";
-import {
-  ordersStore,
-  useOrder,
-  type StoredOrder,
-  type StoredOrderItem,
-} from "@/lib/orders-store";
-import { cartStore } from "@/lib/cart-store";
+import { formatDateTime, formatVND } from "@/lib/domain";
+import { useCancelOrder, useOrder, useReorder } from "@/lib/orders-store";
+import { apiErrorMessage } from "@/lib/api/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/orders/$orderId")({
@@ -41,98 +29,52 @@ export const Route = createFileRoute("/orders/$orderId")({
   component: OrderDetailPage,
 });
 
-function buildFallbackOrder(orderId: string): StoredOrder {
-  const shop = getShop("com-nha-hoa-lac")!;
-  const items: StoredOrderItem[] = [
-    {
-      productId: "com-ga-sot-mam",
-      quantity: 2,
-      price: 35000,
-      name: "Cơm gà sốt mắm",
-      image: products.find((p) => p.id === "com-ga-sot-mam")!.image,
-      note: "Ít cay",
-    },
-    {
-      productId: "com-suon-bi-cha",
-      quantity: 1,
-      price: 45000,
-      name: "Cơm sườn bì chả",
-      image: products.find((p) => p.id === "com-suon-bi-cha")!.image,
-    },
-  ];
-  const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const discount = 10000;
-  const shipFee = 10000;
-  return {
-    id: orderId,
-    shopId: shop.id,
-    shopName: shop.name,
-    shopPhone: shop.phone,
-    shopAddress: shop.address,
-    items,
-    subtotal,
-    discount,
-    shipFee,
-    total: subtotal - discount + shipFee,
-    voucherCode: "HOALAC10",
-    zoneId: "fpt-uni",
-    zoneName: "FPT University",
-    address: "FPT University — Sảnh tầng 1, gần cửa chính",
-    phone: "0987 654 321",
-    customerName: "Nguyễn Văn A",
-    note: "Ít cay, thêm tương ớt",
-    status: "dang_chuan_bi",
-    createdAt: new Date().toISOString(),
-    placedAt: "12:34, hôm nay",
-  };
-}
-
 function OrderDetailPage() {
   const { orderId } = Route.useParams();
-  const stored = useOrder(orderId);
-  const order = stored ?? buildFallbackOrder(orderId);
+  const { data: order, isLoading, isError } = useOrder(orderId);
+  const cancelOrder = useCancelOrder();
+  const reorder = useReorder();
   const navigate = useNavigate();
 
-  // Simulate progress for stored orders that aren't terminal
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!stored) return;
-    if (stored.status === "hoan_thanh" || stored.status === "da_huy") return;
-    const t = setInterval(() => setTick((x) => x + 1), 8000);
-    return () => clearInterval(t);
-  }, [stored]);
+  if (isLoading)
+    return (
+      <AppShell>
+        <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+          Đang tải chi tiết đơn...
+        </div>
+      </AppShell>
+    );
+  if (isError || !order)
+    return (
+      <AppShell>
+        <div className="px-4 py-10 text-center text-sm text-destructive">
+          Không tìm thấy đơn hàng hoặc chưa thể kết nối máy chủ.
+        </div>
+      </AppShell>
+    );
 
-  useEffect(() => {
-    if (!stored) return;
-    if (stored.status === "hoan_thanh" || stored.status === "da_huy") return;
-    const idx = ORDER_STATUS_FLOW.indexOf(stored.status);
-    if (idx >= 0 && idx < ORDER_STATUS_FLOW.length - 1) {
-      ordersStore.setStatus(stored.id, ORDER_STATUS_FLOW[idx + 1]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick]);
-
-  const status: OrderStatus = order.status;
-  const canCancel = ["da_dat", "cho_quan_xac_nhan"].includes(status);
+  const status = order.status;
+  const canCancel = order.canCancel;
   const canceled = status === "da_huy";
   const isDone = status === "hoan_thanh";
 
   const handleCancel = () => {
-    if (stored) ordersStore.cancel(stored.id);
-    toast.success("Đơn hàng đã bị hủy");
+    cancelOrder.mutate(order.id, {
+      onSuccess: () => toast.success("Đơn hàng đã bị hủy"),
+      onError: (error) => toast.error(apiErrorMessage(error)),
+    });
   };
 
   const handleReorder = () => {
-    cartStore.reorder(
-      order.shopId,
-      order.items.map((i) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-        note: i.note,
-      })),
-    );
-    toast.success("Đã thêm lại món vào giỏ");
-    navigate({ to: "/cart" });
+    reorder.mutate(order.id, {
+      onSuccess: ({ skippedItems }) => {
+        toast.success(
+          skippedItems.length ? "Đã thêm các món còn bán vào giỏ" : "Đã thêm lại món vào giỏ",
+        );
+        navigate({ to: "/cart" });
+      },
+      onError: (error) => toast.error(apiErrorMessage(error)),
+    });
   };
 
   return (
@@ -145,10 +87,8 @@ function OrderDetailPage() {
           <ArrowLeft className="size-4" />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-extrabold md:text-2xl">
-            Đơn #{order.id}
-          </h1>
-          <p className="text-xs text-muted-foreground">Đặt lúc {order.placedAt}</p>
+          <h1 className="truncate text-xl font-extrabold md:text-2xl">Đơn #{order.displayCode}</h1>
+          <p className="text-xs text-muted-foreground">Đặt lúc {formatDateTime(order.placedAt)}</p>
         </div>
         <OrderStatusBadge status={status} />
       </div>
@@ -174,7 +114,9 @@ function OrderDetailPage() {
           <div className="min-w-0 flex-1">
             {isDone && "Đơn đã hoàn thành. Cảm ơn bạn đã ủng hộ quán!"}
             {canceled && "Đơn đã hủy theo yêu cầu của bạn."}
-            {!isDone && !canceled && "Quán đang xử lý đơn. Dự kiến nhận sau ~25 phút."}
+            {!isDone &&
+              !canceled &&
+              `Quán đang xử lý đơn${order.delivery.etaMinutes ? `. Dự kiến nhận sau ~${order.delivery.etaMinutes} phút.` : "."}`}
           </div>
         </div>
       </div>
@@ -183,7 +125,7 @@ function OrderDetailPage() {
         <div className="space-y-4">
           <section className="rounded-2xl bg-card p-5 shadow-card">
             <h2 className="mb-4 font-bold">Trạng thái đơn</h2>
-            <OrderTimeline current={status} />
+            <OrderTimeline current={status} history={order.statusHistory} />
           </section>
 
           <section className="rounded-2xl bg-card p-4 shadow-card">
@@ -192,12 +134,12 @@ function OrderDetailPage() {
               {order.items.map((it) => (
                 <div key={it.productId} className="flex gap-3">
                   <img
-                    src={it.image}
+                    src={it.productImageUrl}
                     alt=""
                     className="size-14 shrink-0 rounded-lg object-cover"
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="line-clamp-1 font-semibold">{it.name}</div>
+                    <div className="line-clamp-1 font-semibold">{it.productName}</div>
                     <div className="text-xs text-muted-foreground">x{it.quantity}</div>
                     {it.note && (
                       <div className="mt-0.5 line-clamp-1 text-[11px] italic text-muted-foreground">
@@ -205,26 +147,24 @@ function OrderDetailPage() {
                       </div>
                     )}
                   </div>
-                  <div className="font-semibold">
-                    {formatVND(it.price * it.quantity)}
-                  </div>
+                  <div className="font-semibold">{formatVND(it.lineTotal)}</div>
                 </div>
               ))}
             </div>
             <div className="mt-4 space-y-1.5 border-t border-dashed pt-3 text-sm">
-              <Row label="Tiền món" value={formatVND(order.subtotal)} />
-              {order.discount > 0 && (
+              <Row label="Tiền món" value={formatVND(order.pricing.subtotal)} />
+              {order.pricing.discount > 0 && (
                 <Row
                   label={`Voucher${order.voucherCode ? ` (${order.voucherCode})` : ""}`}
-                  value={`-${formatVND(order.discount)}`}
+                  value={`-${formatVND(order.pricing.discount)}`}
                   accent="success"
                 />
               )}
-              <Row label="Phí giao" value={formatVND(order.shipFee)} />
+              <Row label="Phí giao" value={formatVND(order.pricing.deliveryFee)} />
               <div className="flex items-center justify-between pt-2 text-base">
                 <span className="font-semibold">Tổng cần trả</span>
                 <span className="text-lg font-extrabold text-primary">
-                  {formatVND(order.total)}
+                  {formatVND(order.pricing.total)}
                 </span>
               </div>
             </div>
@@ -242,9 +182,7 @@ function OrderDetailPage() {
               <div className="grid size-12 place-items-center rounded-xl bg-muted text-lg">🍽️</div>
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{order.shopName}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {order.shopAddress}
-                </div>
+                <div className="truncate text-xs text-muted-foreground">{order.shopAddress}</div>
               </div>
             </Link>
             <a
@@ -260,17 +198,19 @@ function OrderDetailPage() {
             <div className="space-y-2 text-sm">
               <div className="flex gap-2">
                 <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
-                <span>{order.address}</span>
+                <span>
+                  {order.delivery.zoneName} — {order.delivery.addressLine}
+                </span>
               </div>
               <div className="flex gap-2">
                 <Phone className="mt-0.5 size-4 shrink-0 text-primary" />
                 <span>
-                  {order.customerName} · {order.phone}
+                  {order.delivery.recipientName} · {order.delivery.phone}
                 </span>
               </div>
-              {order.note && (
+              {order.delivery.note && (
                 <p className="rounded-xl bg-muted p-2 text-xs text-muted-foreground">
-                  Ghi chú: {order.note}
+                  Ghi chú: {order.delivery.note}
                 </p>
               )}
             </div>
@@ -299,25 +239,20 @@ function OrderDetailPage() {
               <>
                 <Button
                   className="w-full rounded-full"
-                  onClick={() => toast.success("Cảm ơn bạn đã đánh giá!")}
+                  onClick={() => {
+                    // TODO: cần modal chọn 1-5 sao/comment trước khi gọi POST /orders/:id/review.
+                    toast.info("Biểu mẫu đánh giá đang được hoàn thiện");
+                  }}
                 >
                   <Star /> Đánh giá quán
                 </Button>
-                <Button
-                  variant="secondary"
-                  className="w-full rounded-full"
-                  onClick={handleReorder}
-                >
+                <Button variant="secondary" className="w-full rounded-full" onClick={handleReorder}>
                   <RotateCcw /> Đặt lại
                 </Button>
               </>
             )}
             {canceled && (
-              <Button
-                variant="secondary"
-                className="w-full rounded-full"
-                onClick={handleReorder}
-              >
+              <Button variant="secondary" className="w-full rounded-full" onClick={handleReorder}>
                 <RotateCcw /> Đặt lại
               </Button>
             )}
@@ -328,23 +263,11 @@ function OrderDetailPage() {
   );
 }
 
-function Row({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: "success";
-}) {
+function Row({ label, value, accent }: { label: string; value: string; accent?: "success" }) {
   return (
     <div className="flex items-center justify-between">
       <span>{label}</span>
-      <span
-        className={
-          "font-semibold " + (accent === "success" ? "text-success" : "")
-        }
-      >
+      <span className={"font-semibold " + (accent === "success" ? "text-success" : "")}>
         {value}
       </span>
     </div>

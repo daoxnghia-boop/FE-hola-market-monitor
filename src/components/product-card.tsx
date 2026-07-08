@@ -1,7 +1,9 @@
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cartStore } from "@/lib/cart-store";
-import { formatVND, type Product } from "@/lib/mock-data";
+import { useAddCartItem } from "@/lib/api/hooks";
+import type { ProductDto } from "@/lib/api/types";
+import { ApiError, apiErrorMessage } from "@/lib/api/client";
+import { formatVND } from "@/lib/domain";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -12,22 +14,44 @@ export function ProductCard({
   disabled = false,
   disabledLabel,
 }: {
-  product: Product;
+  product: ProductDto;
   layout?: "grid" | "row";
   /** When provided, clicking the card or "+" calls this instead of adding directly. */
-  onSelect?: (p: Product) => void;
+  onSelect?: (p: ProductDto) => void;
   /** Force-disable adding (e.g. shop closed or zone not supported). */
   disabled?: boolean;
   disabledLabel?: string;
 }) {
+  const addItem = useAddCartItem();
   const blocked = disabled || !product.available;
 
   const handleAdd = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (blocked) return;
     if (onSelect) return onSelect(product);
-    cartStore.add(product.id, 1);
-    toast.success(`Đã thêm ${product.name} vào giỏ`);
+    addItem.mutate(
+      { productId: product.id, quantity: 1 },
+      {
+        onSuccess: () => toast.success(`Đã thêm ${product.name} vào giỏ`),
+        onError: (error) => {
+          if (
+            error instanceof ApiError &&
+            error.code === "CART_SHOP_CONFLICT" &&
+            window.confirm("Giỏ hiện có món của quán khác. Thay giỏ hàng hiện tại?")
+          ) {
+            addItem.mutate(
+              { productId: product.id, quantity: 1, replaceExistingCart: true },
+              {
+                onSuccess: () => toast.success(`Đã thêm ${product.name} vào giỏ`),
+                onError: (nextError) => toast.error(apiErrorMessage(nextError)),
+              },
+            );
+            return;
+          }
+          toast.error(apiErrorMessage(error));
+        },
+      },
+    );
   };
 
   const handleCardClick = () => {
@@ -51,7 +75,7 @@ export function ProductCard({
       >
         <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted">
           <img
-            src={product.image}
+            src={product.imageUrl}
             alt={product.name}
             loading="lazy"
             className="size-full object-cover"
@@ -64,13 +88,9 @@ export function ProductCard({
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
           <h4 className="line-clamp-1 font-semibold">{product.name}</h4>
-          <p className="line-clamp-2 text-xs text-muted-foreground">
-            {product.description}
-          </p>
+          <p className="line-clamp-2 text-xs text-muted-foreground">{product.description}</p>
           <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-            <span className="font-bold text-primary">
-              {formatVND(product.price)}
-            </span>
+            <span className="font-bold text-primary">{formatVND(product.price)}</span>
             <Button
               size="icon"
               onClick={handleAdd}
@@ -99,7 +119,7 @@ export function ProductCard({
     >
       <div className="relative aspect-square overflow-hidden bg-muted">
         <img
-          src={product.image}
+          src={product.imageUrl}
           alt={product.name}
           loading="lazy"
           className="size-full object-cover transition group-hover:scale-105"
@@ -121,9 +141,7 @@ export function ProductCard({
       </div>
       <div className="space-y-1 p-3">
         <h4 className="line-clamp-1 text-sm font-semibold">{product.name}</h4>
-        <p className="line-clamp-1 text-xs text-muted-foreground">
-          Đã bán {product.soldCount}
-        </p>
+        <p className="line-clamp-1 text-xs text-muted-foreground">Đã bán {product.soldCount}</p>
         <div className="font-bold text-primary">{formatVND(product.price)}</div>
       </div>
     </div>

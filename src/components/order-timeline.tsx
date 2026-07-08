@@ -1,10 +1,7 @@
 import { Check, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  ORDER_STATUS_FLOW,
-  ORDER_STATUS_LABEL,
-  type OrderStatus,
-} from "@/lib/mock-data";
+import { ORDER_STATUS_FLOW, ORDER_STATUS_LABEL } from "@/lib/domain";
+import type { OrderStatus } from "@/lib/api/types";
 
 const STEP_TIMES: Record<OrderStatus, string> = {
   da_dat: "Vừa xong",
@@ -16,7 +13,13 @@ const STEP_TIMES: Record<OrderStatus, string> = {
   da_huy: "—",
 };
 
-export function OrderTimeline({ current }: { current: OrderStatus }) {
+export function OrderTimeline({
+  current,
+  history = [],
+}: {
+  current: OrderStatus;
+  history?: Array<{ status: OrderStatus; occurredAt: string }>;
+}) {
   if (current === "da_huy") {
     return (
       <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
@@ -72,7 +75,13 @@ export function OrderTimeline({ current }: { current: OrderStatus }) {
                 {ORDER_STATUS_LABEL[step]}
               </div>
               <div className="text-xs text-muted-foreground">
-                {active || done ? STEP_TIMES[step] : "Chưa cập nhật"}
+                {history.find((item) => item.status === step)?.occurredAt
+                  ? new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(
+                      new Date(history.find((item) => item.status === step)!.occurredAt),
+                    )
+                  : active || done
+                    ? STEP_TIMES[step]
+                    : "Chưa cập nhật"}
               </div>
             </div>
           </li>

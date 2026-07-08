@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/mock-data";
+import { ORDER_STATUS_LABEL } from "@/lib/domain";
+import type { OrderStatus } from "@/lib/api/types";
 
 const STYLES: Record<OrderStatus, string> = {
   da_dat: "bg-accent text-accent-foreground",

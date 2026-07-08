@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ShoppingBag } from "lucide-react";
 import { useCart, useCartSubtotal } from "@/lib/cart-store";
-import { formatVND } from "@/lib/mock-data";
+import { formatVND } from "@/lib/domain";
 
 /**
  * Sticky bottom cart bar — sits above the bottom navigation on mobile.
@@ -29,9 +29,7 @@ export function BottomCartBar({ to = "/cart" as const }: { to?: "/cart" | "/chec
           </span>
           {count} món · {formatVND(subtotal)}
         </span>
-        <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-bold">
-          Xem giỏ
-        </span>
+        <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-bold">Xem giỏ</span>
       </Link>
     </div>
   );

@@ -1,14 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import {
-  ArrowLeft,
-  Bike,
-  MapPin,
-  Phone,
-  ShoppingBag,
-  User,
-  Wallet,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Bike, MapPin, Phone, ShoppingBag, User, Wallet } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { CartItem } from "@/components/cart-item";
 import { EmptyState } from "@/components/empty-state";
@@ -16,15 +8,10 @@ import { ZonePicker } from "@/components/zone-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  cartStore,
-  useCart,
-  useCartItems,
-  useCartPricing,
-} from "@/lib/cart-store";
-import { formatVND, getShop } from "@/lib/mock-data";
-import { ordersStore } from "@/lib/orders-store";
-import { addNotification } from "@/lib/notifications-store";
+import { useCart, useCartItems, useCartPricing } from "@/lib/cart-store";
+import { formatVND } from "@/lib/domain";
+import { useAddresses, useCartQuery, useCreateOrder, useSession } from "@/lib/api/hooks";
+import { apiErrorMessage } from "@/lib/api/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/checkout")({
@@ -41,13 +28,39 @@ function CheckoutPage() {
   const cart = useCart();
   const items = useCartItems();
   const pricing = useCartPricing();
+  const cartQuery = useCartQuery();
+  const session = useSession();
+  const addresses = useAddresses();
+  const createOrder = useCreateOrder();
   const navigate = useNavigate();
-  const shop = cart.shopId ? getShop(cart.shopId) : null;
+  const shop = cart.shop;
 
-  const [name, setName] = useState("Nguyễn Văn A");
-  const [phone, setPhone] = useState("0987 654 321");
-  const [address, setAddress] = useState("Sảnh tầng 1, gần cửa chính");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
+
+  useEffect(() => {
+    const saved = addresses.data?.find((item) => item.isDefault) ?? addresses.data?.[0];
+    setName((current) => current || saved?.recipientName || session.data?.user?.fullName || "");
+    setPhone((current) => current || saved?.phone || session.data?.user?.phone || "");
+    setAddress((current) => current || saved?.addressLine || "");
+  }, [addresses.data, session.data?.user]);
+
+  if (cartQuery.isLoading)
+    return (
+      <AppShell>
+        <Header title="Xác nhận đặt hàng" />
+        <div className="px-4 text-sm text-muted-foreground">Đang tải thông tin đơn...</div>
+      </AppShell>
+    );
+  if (cartQuery.isError)
+    return (
+      <AppShell>
+        <Header title="Xác nhận đặt hàng" />
+        <div className="px-4 text-sm text-destructive">Chưa thể tải thông tin đơn.</div>
+      </AppShell>
+    );
 
   if (items.length === 0 || !shop) {
     return (
@@ -69,7 +82,7 @@ function CheckoutPage() {
     );
   }
 
-  const supported = shop.supportedZones.includes(pricing.zone.id);
+  const supported = shop.delivery?.supported ?? !cart.blockingReasons.includes("ZONE_UNSUPPORTED");
 
   const handlePlace = () => {
     if (!supported) {
@@ -80,40 +93,30 @@ function CheckoutPage() {
       toast.error("Vui lòng điền đầy đủ thông tin nhận hàng");
       return;
     }
-    const order = ordersStore.create({
-      shopId: shop.id,
-      shopName: shop.name,
-      shopPhone: shop.phone,
-      shopAddress: shop.address,
-      items: items.map((i) => ({
-        productId: i.productId,
-        quantity: i.quantity,
-        price: i.product.price,
-        name: i.product.name,
-        image: i.product.image,
-        note: i.note,
-      })),
-      subtotal: pricing.subtotal,
-      discount: pricing.discount,
-      shipFee: pricing.shipFee,
-      total: pricing.total,
-      voucherCode: pricing.voucher?.code ?? null,
-      zoneId: pricing.zone.id,
-      zoneName: pricing.zone.name,
-      address: `${pricing.zone.name} — ${address}`,
-      phone,
-      customerName: name,
-      note,
-    });
-    addNotification({
-      type: "order",
-      title: "Đã gửi đơn đến quán",
-      body: `Quán ${shop.name} sẽ xác nhận đơn #${order.id} trong ít phút.`,
-      orderId: order.id,
-    });
-    cartStore.clear();
-    toast.success("Đã gửi đơn đến quán");
-    navigate({ to: "/orders/$orderId", params: { orderId: order.id } });
+    if (!pricing.zone) return toast.error("Vui lòng chọn khu giao hàng");
+    createOrder.mutate(
+      {
+        body: {
+          cartId: cart.id,
+          delivery: {
+            deliveryZoneId: pricing.zone.id,
+            recipientName: name.trim(),
+            phone: phone.trim(),
+            addressLine: address.trim(),
+          },
+          note: note.trim() || undefined,
+          paymentMethod: "cash_on_delivery",
+        },
+        idempotencyKey: crypto.randomUUID(),
+      },
+      {
+        onSuccess: (order) => {
+          toast.success("Đã gửi đơn đến quán");
+          navigate({ to: "/orders/$orderId", params: { orderId: order.id } });
+        },
+        onError: (error) => toast.error(apiErrorMessage(error)),
+      },
+    );
   };
 
   return (
@@ -124,11 +127,13 @@ function CheckoutPage() {
         <div className="space-y-4">
           {/* Shop */}
           <div className="flex items-center gap-3 rounded-2xl bg-card p-3 shadow-card">
-            <img src={shop.logo} alt="" className="size-12 rounded-xl object-cover" />
+            <img src={shop.logoUrl} alt="" className="size-12 rounded-xl object-cover" />
             <div className="min-w-0 flex-1">
               <div className="truncate font-semibold">{shop.name}</div>
               <div className="text-xs text-muted-foreground">
-                Dự kiến giao sau ~{shop.prepTime + 10} phút
+                {shop.estimatedDeliveryMinutes
+                  ? `Dự kiến giao sau ~${shop.estimatedDeliveryMinutes} phút`
+                  : `Chuẩn bị khoảng ${shop.prepTimeMinutes} phút`}
               </div>
             </div>
           </div>
@@ -152,7 +157,9 @@ function CheckoutPage() {
                   <MapPin className="size-4 text-primary" />
                   <div className="min-w-0 flex-1">
                     <div className="text-xs text-muted-foreground">Điểm giao</div>
-                    <div className="truncate font-semibold">{pricing.zone.name}</div>
+                    <div className="truncate font-semibold">
+                      {pricing.zone?.name || "Chọn khu giao hàng"}
+                    </div>
                   </div>
                   <span className="text-xs font-semibold text-primary">Đổi</span>
                 </button>
@@ -163,16 +170,9 @@ function CheckoutPage() {
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
               </Field>
               <Field label="Số điện thoại" icon={<Phone className="size-3.5" />}>
-                <Input
-                  inputMode="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+                <Input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
               </Field>
-              <Field
-                label="Địa chỉ chi tiết tại điểm giao"
-                className="sm:col-span-2"
-              >
+              <Field label="Địa chỉ chi tiết tại điểm giao" className="sm:col-span-2">
                 <Input
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -220,7 +220,7 @@ function CheckoutPage() {
             size="lg"
             className="hidden h-12 w-full rounded-full text-base font-bold md:flex"
             onClick={handlePlace}
-            disabled={!supported}
+            disabled={!supported || !cart.canCheckout || createOrder.isPending}
           >
             Gửi đơn cho quán
           </Button>
@@ -241,7 +241,7 @@ function CheckoutPage() {
           <Button
             size="lg"
             onClick={handlePlace}
-            disabled={!supported}
+            disabled={!supported || !cart.canCheckout || createOrder.isPending}
             className="h-12 flex-[1.4] rounded-full text-base font-bold"
           >
             Gửi đơn cho quán

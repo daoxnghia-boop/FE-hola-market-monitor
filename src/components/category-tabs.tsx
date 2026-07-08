@@ -1,4 +1,4 @@
-import { categories } from "@/lib/mock-data";
+import { useCategories } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
 
 export function CategoryTabs({
@@ -10,6 +10,7 @@ export function CategoryTabs({
   onChange?: (v: string) => void;
   variant?: "icons" | "pills";
 }) {
+  const { data: categories = [] } = useCategories();
   if (variant === "pills") {
     return (
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -26,7 +27,7 @@ export function CategoryTabs({
                   : "border-border bg-card text-foreground hover:border-primary/40",
               )}
             >
-              <span className="mr-1">{c.icon}</span>
+              <span className="mr-1">{"icon" in c ? c.icon : c.iconText || "🍽️"}</span>
               {c.name}
             </button>
           );
@@ -44,7 +45,7 @@ export function CategoryTabs({
           className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center"
         >
           <span className="grid size-14 place-items-center rounded-2xl bg-accent text-2xl shadow-card transition hover:scale-105">
-            {c.icon}
+            {c.iconText || "🍽️"}
           </span>
           <span className="line-clamp-1 text-xs font-medium">{c.name}</span>
         </button>
