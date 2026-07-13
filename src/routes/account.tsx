@@ -1,65 +1,98 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
-import { Receipt, Ticket, MapPin, LogIn } from "lucide-react";
-import { useAddresses, useSession } from "@/lib/api/hooks";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Receipt, Ticket, MapPin, LogIn, LogOut, ShieldCheck, Bell, Heart, User } from "lucide-react";
+import { useAddresses, useLogout, useSession } from "@/lib/api/hooks";
 
 export const Route = createFileRoute("/account")({
-  head: () => ({ meta: [{ title: "Tài khoản — Ăn Hòa Lạc" }] }),
+  head: () => ({ meta: [{ title: "Tài khoản — HoLa Market" }] }),
   component: AccountPage,
 });
 
 function AccountPage() {
   const session = useSession();
   const addresses = useAddresses();
+  const logout = useLogout();
+  const navigate = useNavigate();
   const user = session.data?.user;
+  const authed = !!user;
+  const isAdmin = user?.role === "admin";
+
+  const doLogout = async () => {
+    await logout.mutateAsync();
+    navigate({ to: "/", replace: true });
+  };
 
   return (
     <AppShell>
       <div className="px-4 py-6">
         <div className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-card">
           <div className="grid size-14 place-items-center overflow-hidden rounded-full bg-white/20 text-2xl">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="size-full object-cover" />
-            ) : (
-              "🙋"
-            )}
+            {user?.avatarUrl ? <img src={user.avatarUrl} alt="" className="size-full object-cover" /> : "🙋"}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-extrabold">
-              {session.isLoading ? "Đang tải..." : user?.fullName || "Khách Hòa Lạc"}
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold">
+                {session.isLoading ? "Đang tải..." : user?.fullName || "Khách Hòa Lạc"}
+              </span>
+              {isAdmin && <Badge variant="secondary" className="gap-1"><ShieldCheck className="size-3" /> Admin</Badge>}
             </div>
             <div className="text-xs opacity-90">
-              {user?.phone || "Đăng nhập để lưu địa chỉ & đơn hàng"}
+              {user?.phone || "Đăng nhập để lưu địa chỉ, đơn hàng và ưu đãi"}
             </div>
+            {user?.email && <div className="text-xs opacity-90">{user.email}</div>}
           </div>
-          {!user && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="rounded-full"
-              onClick={() => {
-                // TODO: nối màn hình nhập OTP khi backend Auth được triển khai.
-                toast.info("Tính năng đăng nhập đang được hoàn thiện");
-              }}
-            >
-              <LogIn className="size-4" /> Đăng nhập
+          {!authed && (
+            <Button asChild variant="secondary" size="sm" className="rounded-full">
+              <Link to="/login"><LogIn className="size-4" /> Đăng nhập</Link>
             </Button>
           )}
         </div>
 
+        {!authed && (
+          <div className="mt-4 flex gap-2">
+            <Button asChild className="flex-1"><Link to="/login">Đăng nhập</Link></Button>
+            <Button asChild variant="outline" className="flex-1"><Link to="/register">Tạo tài khoản</Link></Button>
+          </div>
+        )}
+
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="mt-4 flex items-center justify-between rounded-2xl bg-primary/10 p-4 shadow-card"
+          >
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground"><ShieldCheck className="size-5" /></span>
+              <div>
+                <div className="font-semibold">Trang quản trị</div>
+                <div className="text-xs text-muted-foreground">Quản lý cửa hàng, đơn hàng, người dùng</div>
+              </div>
+            </div>
+            <span className="text-sm font-semibold text-primary">Mở →</span>
+          </Link>
+        )}
+
         <div className="mt-4 grid gap-2">
           <Tile to="/orders" icon={<Receipt className="size-5" />} label="Đơn của tôi" />
           <Tile to="/vouchers" icon={<Ticket className="size-5" />} label="Ưu đãi" />
+          <Tile to="/notifications" icon={<Bell className="size-5" />} label="Thông báo" />
+          <Tile to="/" icon={<Heart className="size-5" />} label="Quán yêu thích" />
           <Tile
             to="/"
             icon={<MapPin className="size-5" />}
             label={`Địa chỉ giao hàng${addresses.data?.length ? ` (${addresses.data.length})` : ""}`}
           />
+          <Tile to="/account" icon={<User className="size-5" />} label="Cập nhật hồ sơ" />
         </div>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground">v0.1 MVP · Ăn Hòa Lạc</p>
+        {authed && (
+          <Button variant="outline" className="mt-6 w-full" onClick={doLogout} disabled={logout.isPending}>
+            <LogOut className="size-4" /> Đăng xuất
+          </Button>
+        )}
+
+        <p className="mt-8 text-center text-xs text-muted-foreground">v0.1 MVP · HoLa Market</p>
       </div>
     </AppShell>
   );
