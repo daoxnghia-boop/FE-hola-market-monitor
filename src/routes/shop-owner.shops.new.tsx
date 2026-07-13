@@ -35,6 +35,7 @@ const schema = z.object({
   prepTimeMinutes: z.coerce.number().int().min(1, "Phải > 0").max(180, "Tối đa 180 phút"),
   categoryIds: z.array(z.string()).min(1, "Chọn ít nhất 1 danh mục"),
   supportedZoneIds: z.array(z.string()).min(1, "Chọn ít nhất 1 khu vực giao"),
+  deliveryFees: z.record(z.string(), z.coerce.number().int().min(0, "Phí không được âm")),
   acceptedTerms: z.boolean().refine((v) => v === true, "Bạn cần đồng ý điều khoản"),
 });
 
@@ -65,6 +66,7 @@ function NewShopPage() {
       prepTimeMinutes: 15,
       categoryIds: [],
       supportedZoneIds: [],
+      deliveryFees: {},
       acceptedTerms: false,
     },
   });
@@ -78,11 +80,18 @@ function NewShopPage() {
 
   const categoryIds = watch("categoryIds");
   const supportedZoneIds = watch("supportedZoneIds");
+  const deliveryFees = watch("deliveryFees") ?? {};
   const acceptedTerms = watch("acceptedTerms");
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const shop = await create.mutateAsync({ ...values, acceptedTerms: true });
+      // Chỉ giữ phí giao của các khu đang hỗ trợ.
+      const fees: Record<string, number> = {};
+      for (const id of values.supportedZoneIds) {
+        const f = values.deliveryFees[id];
+        if (typeof f === "number") fees[id] = f;
+      }
+      const shop = await create.mutateAsync({ ...values, deliveryFees: fees, acceptedTerms: true });
       toast.success("Đã gửi hồ sơ. Chúng tôi sẽ duyệt trong 1-2 ngày làm việc.");
       navigate({ to: "/shop-owner", search: {} as never, params: {} as never, replace: true });
       void shop;
@@ -91,12 +100,24 @@ function NewShopPage() {
     }
   };
 
-  const toggle = (field: "categoryIds" | "supportedZoneIds", id: string) => {
+  const toggleZone = (zoneId: string, baseFee: number) => {
+    const cur = form.getValues("supportedZoneIds");
+    const isOn = cur.includes(zoneId);
+    const next = isOn ? cur.filter((x) => x !== zoneId) : [...cur, zoneId];
+    setValue("supportedZoneIds", next, { shouldValidate: true });
+    const nextFees = { ...form.getValues("deliveryFees") };
+    if (isOn) delete nextFees[zoneId];
+    else if (nextFees[zoneId] === undefined) nextFees[zoneId] = baseFee;
+    setValue("deliveryFees", nextFees, { shouldValidate: true });
+  };
+
+  const toggle = (field: "categoryIds", id: string) => {
     const cur = form.getValues(field) as string[];
     setValue(field, cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id], {
       shouldValidate: true,
     });
   };
+
 
   return (
     <div className="px-4 py-5">
