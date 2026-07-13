@@ -176,18 +176,13 @@ function HomePage() {
           to="/search"
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {popularQuery.isLoading && (
+          {popularQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Đang tải món phổ biến...</p>
+          ) : popular.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Hiện chưa có món phổ biến.</p>
+          ) : (
+            popular.map((p) => <ProductCard key={p.id} product={p} onSelect={openProduct} />)
           )}
-          {popularQuery.isError && (
-            <p className="text-sm text-destructive">Chưa thể tải món phổ biến.</p>
-          )}
-          {!popularQuery.isLoading && !popularQuery.isError && popular.length === 0 && (
-            <p className="text-sm text-muted-foreground">Chưa có món phổ biến.</p>
-          )}
-          {popular.map((p) => (
-            <ProductCard key={p.id} product={p} onSelect={openProduct} />
-          ))}
         </div>
       </section>
 
