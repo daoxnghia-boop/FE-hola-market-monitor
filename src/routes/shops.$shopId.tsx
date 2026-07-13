@@ -49,8 +49,6 @@ function ShopDetailPage() {
   const categoriesQuery = useCategories();
   const fav = useIsFavorite(shopId);
   const favoriteAction = useFavoriteActions();
-  const [selected, setSelected] = useState<ProductDto | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const shop = shopQuery.data;
   const allProducts = productsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
