@@ -3,7 +3,6 @@ import {
   createFileRoute,
   Link,
   notFound,
-  useNavigate,
   useRouter,
 } from "@tanstack/react-router";
 import {
