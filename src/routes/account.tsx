@@ -157,9 +157,9 @@ function AccountPage() {
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-semibold">{s.name}</div>
                         <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
-                          <span className="capitalize">{s.approvalStatus}</span>
+                          <span>{APPROVAL_LABEL[s.approvalStatus ?? "pending"]}</span>
                           <span>·</span>
-                          <span>{s.operationStatus}</span>
+                          <span>{OPERATION_LABEL[s.operationStatus ?? "active"]}</span>
                         </div>
                       </div>
                       <ChevronRight className="size-4 text-muted-foreground" />
