@@ -82,18 +82,48 @@ function EditShopPage() {
         logoUrl: shop.data.logoUrl.startsWith("http") ? shop.data.logoUrl : "",
         coverUrl: shop.data.coverUrl.startsWith("http") ? shop.data.coverUrl : "",
       });
+      setSupportedZoneIds(shop.data.supportedZoneIds);
+      setDeliveryFees({ ...(shop.data.deliveryFees ?? {}) });
     }
   }, [shop.data, reset]);
 
+  const toggleZone = (zoneId: string, baseFee: number) => {
+    setSupportedZoneIds((cur) => {
+      const isOn = cur.includes(zoneId);
+      const next = isOn ? cur.filter((x) => x !== zoneId) : [...cur, zoneId];
+      setDeliveryFees((f) => {
+        const nf = { ...f };
+        if (isOn) delete nf[zoneId];
+        else if (nf[zoneId] === undefined) nf[zoneId] = baseFee;
+        return nf;
+      });
+      return next;
+    });
+  };
+
   const onSubmit = async (values: FormValues) => {
+    if (supportedZoneIds.length === 0) {
+      toast.error("Chọn ít nhất 1 khu vực giao.");
+      return;
+    }
+    const fees: Record<string, number> = {};
+    for (const id of supportedZoneIds) {
+      const raw = deliveryFees[id];
+      if (typeof raw === "number") fees[id] = Math.max(0, Math.floor(raw));
+    }
     try {
-      await update.mutateAsync({ id: shopId, body: values });
+      await update.mutateAsync({
+        id: shopId,
+        body: { ...values, supportedZoneIds, deliveryFees: fees },
+      });
       toast.success("Đã lưu thay đổi.");
       navigate({ to: "/shop-owner", replace: true });
     } catch (e) {
       toast.error(apiErrorMessage(e));
     }
   };
+
+
 
   return (
     <div className="px-4 py-5">
@@ -145,6 +175,60 @@ function EditShopPage() {
             <Input {...register("coverUrl")} />
           </Field>
 
+          <div className="space-y-3 rounded-2xl border border-border bg-background/40 p-4">
+            <div>
+              <h3 className="text-sm font-extrabold uppercase tracking-wide text-muted-foreground">
+                Khu vực giao & phí giao riêng
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Bật/tắt khu vực và đặt phí giao dành cho quán của bạn. Nếu để trống, hệ thống sẽ dùng phí chuẩn của khu.
+              </p>
+            </div>
+            {zones.isLoading ? (
+              <Skeleton className="h-16" />
+            ) : (
+              <div className="space-y-2">
+                {zones.data?.map((z) => {
+                  const on = supportedZoneIds.includes(z.id);
+                  return (
+                    <div
+                      key={z.id}
+                      className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => toggleZone(z.id, z.baseDeliveryFee)}
+                        className="size-4 accent-primary"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold">{z.name}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          Phí chuẩn khu: {formatVND(z.baseDeliveryFee)}
+                        </div>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1000}
+                        disabled={!on}
+                        className="h-9 w-28"
+                        value={on ? (deliveryFees[z.id] ?? z.baseDeliveryFee) : ""}
+                        onChange={(e) =>
+                          setDeliveryFees((f) => ({
+                            ...f,
+                            [z.id]: Math.max(0, Number(e.target.value) || 0),
+                          }))
+                        }
+                        placeholder={formatVND(z.baseDeliveryFee)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <Button
             type="submit"
             className="h-12 w-full rounded-full font-bold"
@@ -153,11 +237,12 @@ function EditShopPage() {
             {update.isPending ? "Đang lưu..." : "Lưu thay đổi"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Đổi danh mục/khu vực hoặc chủ quán sẽ yêu cầu duyệt lại (chức năng chi tiết ở đợt sau).
+            Đổi danh mục hoặc chủ quán vẫn cần chờ đợt sau. Cập nhật phí giao có hiệu lực ngay khi lưu.
           </p>
         </form>
       )}
     </div>
+
   );
 }
 
