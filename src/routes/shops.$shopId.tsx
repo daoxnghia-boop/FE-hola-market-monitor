@@ -14,12 +14,10 @@ import {
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { ProductCard } from "@/components/product-card";
-import { ProductSheet } from "@/components/product-sheet";
 import { BottomCartBar } from "@/components/bottom-cart-bar";
 import { ZonePicker } from "@/components/zone-picker";
 import { RatingStars } from "@/components/rating-stars";
 import { formatVND } from "@/lib/domain";
-import type { ProductDto } from "@/lib/api/types";
 import { useCategories, useShop, useShopProducts } from "@/lib/api/hooks";
 import { apiErrorMessage } from "@/lib/api/client";
 import { useDeliveryZone } from "@/lib/cart-store";
