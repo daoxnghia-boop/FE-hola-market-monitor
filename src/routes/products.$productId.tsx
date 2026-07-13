@@ -77,6 +77,11 @@ import { cn } from "@/lib/utils";
 const SITE = "https://hola-market.lovable.app";
 
 export const Route = createFileRoute("/products/$productId")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    orderId: typeof search.orderId === "string" ? search.orderId : undefined,
+    orderItemId:
+      typeof search.orderItemId === "string" ? search.orderItemId : undefined,
+  }),
   loader: async ({ params, context }) => {
     try {
       const data = await context.queryClient.ensureQueryData({
