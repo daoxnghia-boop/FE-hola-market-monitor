@@ -131,7 +131,7 @@ function ShopOwnerHome() {
             })}
           </div>
         )}
-      </div>
+
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
