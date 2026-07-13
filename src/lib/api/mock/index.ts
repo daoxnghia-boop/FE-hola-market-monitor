@@ -753,6 +753,15 @@ async function route(ctx: Ctx): Promise<unknown> {
       notFound("Không tìm thấy sản phẩm.");
     return ok(productReviewSummary(productId));
   }
+  const prodReviewEligMatch = path.match(
+    /^\/products\/([^/]+)\/review-eligibility$/,
+  );
+  if (prodReviewEligMatch && method === "GET") {
+    const productId = prodReviewEligMatch[1];
+    if (!state.products.some((p) => p.id === productId))
+      notFound("Không tìm thấy sản phẩm.");
+    return ok(computeReviewEligibility(productId));
+  }
   const prodRelatedMatch = path.match(/^\/products\/([^/]+)\/related$/);
   if (prodRelatedMatch && method === "GET") {
     const productId = prodRelatedMatch[1];
