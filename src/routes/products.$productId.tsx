@@ -689,6 +689,7 @@ function RelatedProducts({
 // Reviews section
 // -----------------------------
 function ReviewsSection({ productId }: { productId: string }) {
+  const search = Route.useSearch();
   const [filterRating, setFilterRating] = useState<string>("all");
   const [sort, setSort] = useState<ProductReviewSort>("latest");
   const summaryQuery = useProductReviewSummary(productId);
