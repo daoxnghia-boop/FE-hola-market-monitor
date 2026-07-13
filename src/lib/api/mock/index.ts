@@ -1503,8 +1503,24 @@ async function route(ctx: Ctx): Promise<unknown> {
       if (typeof b.baseDeliveryFee === "number" && b.baseDeliveryFee < 0)
         badRequest("INVALID_FEE", "Phí giao không được âm.");
       Object.assign(z!, b);
+      audit("zone.update", "zone", z!.id);
       save();
       return ok(z);
+    }
+    if (adminZoneMatch && method === "DELETE") {
+      const id = adminZoneMatch[1];
+      const z = state.zones.find((x) => x.id === id);
+      if (!z) notFound();
+      const inUse = state.shops.some((s) => s.supportedZoneIds.includes(id));
+      if (inUse)
+        badRequest(
+          "ZONE_IN_USE",
+          "Không thể xóa khu vực đang được ít nhất một quán hỗ trợ. Hãy tắt trước.",
+        );
+      state.zones = state.zones.filter((x) => x.id !== id);
+      audit("zone.delete", "zone", id);
+      save();
+      return ok(undefined);
     }
   }
 
