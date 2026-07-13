@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Plus, Store, ArrowLeft, Pause, Play, Send, Trash2, Pencil } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,7 +58,7 @@ function ShopOwnerHome() {
   };
 
   return (
-    <AppShell>
+    
       <div className="px-4 py-5">
         <div className="mb-4 flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/account" })}>
@@ -154,7 +153,7 @@ function ShopOwnerHome() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AppShell>
+    
   );
 }
 
