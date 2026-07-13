@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createFileRoute,
   Link,
   notFound,
+  useNavigate,
   useRouter,
 } from "@tanstack/react-router";
 import {
@@ -10,11 +11,15 @@ import {
   Bike,
   ChevronRight,
   Clock,
+  LogIn,
   MapPin,
   Minus,
+  Pencil,
   Plus,
+  ShoppingBag,
   Star,
   Store,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
@@ -22,6 +27,12 @@ import { ProductCard } from "@/components/product-card";
 import { ProductImage } from "@/components/product-image";
 import { CartConflictDialog } from "@/components/cart-conflict-dialog";
 import { RatingStars } from "@/components/rating-stars";
+import {
+  ProductReviewForm,
+  type EligibleOrderOption,
+  type ReviewFormValues,
+} from "@/components/product-review-form";
+import { DeleteReviewDialog } from "@/components/delete-review-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,21 +50,29 @@ import { catalogApi } from "@/lib/api/services";
 import {
   queryKeys,
   useAddCartItem,
+  useCreateProductReview,
+  useCurrentUser,
+  useDeleteProductReview,
   useProduct,
+  useProductReviewEligibility,
   useProductReviews,
   useProductReviewSummary,
   useProductsFromSameShop,
   useRelatedProducts,
+  useUpdateProductReview,
 } from "@/lib/api/hooks";
 import { ApiError, apiErrorMessage } from "@/lib/api/client";
 import { formatRelativeTime, formatVND } from "@/lib/domain";
 import type {
   ProductDetailDto,
   ProductRatingDistribution,
+  ProductReviewDto,
   ProductReviewSort,
 } from "@/lib/api/types";
 import { useDeliveryZone } from "@/lib/cart-store";
+import { storeRedirectIntent } from "@/lib/redirect";
 import { cn } from "@/lib/utils";
+
 
 const SITE = "https://hola-market.lovable.app";
 
