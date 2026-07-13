@@ -101,7 +101,7 @@ function AdminOrders() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="px-4 pt-2"><InlineFetchingBar show={__FETCHING__} /></div>
+        <div className="px-4 pt-2"><InlineFetchingBar show={orders.isFetching && !orders.isLoading} /></div>
         {orders.isLoading ? (
           <div className="space-y-2 p-4">
             {Array.from({ length: 5 }).map((_, i) => (
