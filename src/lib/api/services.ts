@@ -92,6 +92,10 @@ export const catalogApi = {
     }),
   productReviewSummary: (productId: string) =>
     apiRequest<ProductReviewSummaryDto>(`/products/${productId}/review-summary`),
+  productReviewEligibility: (productId: string) =>
+    apiRequest<ProductReviewEligibilityDto>(
+      `/products/${productId}/review-eligibility`,
+    ),
   relatedProducts: (
     productId: string,
     opts: { deliveryZoneId?: string; limit?: number } = {},
