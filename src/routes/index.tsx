@@ -146,17 +146,20 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="mt-8 px-4">
-        <SectionHeader icon={<Repeat className="size-4" />} title="Món bạn hay đặt" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {frequentQuery.isLoading && (
-            <p className="text-sm text-muted-foreground">Đang tải gợi ý...</p>
-          )}
-          {frequentProducts.map((p) => (
-            <ProductCard key={p.id} product={p} onSelect={openProduct} />
-          ))}
-        </div>
-      </section>
+      {(frequentQuery.isLoading || frequentProducts.length > 0) && (
+        <section className="mt-8 px-4">
+          <SectionHeader icon={<Repeat className="size-4" />} title="Món bạn hay đặt" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {frequentQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Đang tải gợi ý...</p>
+            ) : (
+              frequentProducts.map((p) => (
+                <ProductCard key={p.id} product={p} onSelect={openProduct} />
+              ))
+            )}
+          </div>
+        </section>
+      )}
 
       {favoriteShops.length > 0 && (
         <section className="mt-8 px-4">
