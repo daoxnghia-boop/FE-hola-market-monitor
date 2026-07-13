@@ -742,6 +742,13 @@ function ReviewsSection({ productId }: { productId: string }) {
         </div>
       </div>
 
+      <ReviewInputPanel
+        productId={productId}
+        preferredOrderItemId={search.orderItemId}
+      />
+
+
+
       {/* Filters (min-height keeps layout stable) */}
       <div className="mt-4 flex flex-wrap items-center gap-2 min-h-11">
         <Select value={filterRating} onValueChange={setFilterRating}>
