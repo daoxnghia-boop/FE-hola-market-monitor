@@ -46,6 +46,16 @@ import {
 
 type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
+const ORDER_STATUS_TEXT: Record<OrderStatus, string> = {
+  da_dat: "Đã đặt",
+  cho_quan_xac_nhan: "Chờ quán xác nhận",
+  quan_da_xac_nhan: "Quán đã xác nhận",
+  dang_chuan_bi: "Đang chuẩn bị",
+  dang_giao: "Đang giao",
+  hoan_thanh: "Hoàn thành",
+  da_huy: "Đã hủy",
+};
+
 const STORAGE_KEY = "hola-mock-state-v7";
 
 type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
