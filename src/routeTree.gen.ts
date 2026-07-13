@@ -26,6 +26,7 @@ import { Route as OrdersIndexRouteImport } from './routes/orders.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ShopsShopIdRouteImport } from './routes/shops.$shopId'
 import { Route as ShopOwnerProductsRouteImport } from './routes/shop-owner.products'
+import { Route as ShopOwnerOrdersRouteImport } from './routes/shop-owner.orders'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
 import { Route as AdminVouchersRouteImport } from './routes/admin.vouchers'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
@@ -123,6 +124,11 @@ const ShopOwnerProductsRoute = ShopOwnerProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => ShopOwnerRoute,
 } as any)
+const ShopOwnerOrdersRoute = ShopOwnerOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => ShopOwnerRoute,
+} as any)
 const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
   id: '/orders/$orderId',
   path: '/orders/$orderId',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/shop-owner/orders': typeof ShopOwnerOrdersRoute
   '/shop-owner/products': typeof ShopOwnerProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
   '/admin/': typeof AdminIndexRoute
@@ -228,6 +235,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/shop-owner/orders': typeof ShopOwnerOrdersRoute
   '/shop-owner/products': typeof ShopOwnerProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
   '/admin': typeof AdminIndexRoute
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/shop-owner/orders': typeof ShopOwnerOrdersRoute
   '/shop-owner/products': typeof ShopOwnerProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
   '/admin/': typeof AdminIndexRoute
@@ -291,6 +300,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vouchers'
     | '/orders/$orderId'
+    | '/shop-owner/orders'
     | '/shop-owner/products'
     | '/shops/$shopId'
     | '/admin/'
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vouchers'
     | '/orders/$orderId'
+    | '/shop-owner/orders'
     | '/shop-owner/products'
     | '/shops/$shopId'
     | '/admin'
@@ -349,6 +360,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vouchers'
     | '/orders/$orderId'
+    | '/shop-owner/orders'
     | '/shop-owner/products'
     | '/shops/$shopId'
     | '/admin/'
@@ -499,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopOwnerProductsRouteImport
       parentRoute: typeof ShopOwnerRoute
     }
+    '/shop-owner/orders': {
+      id: '/shop-owner/orders'
+      path: '/orders'
+      fullPath: '/shop-owner/orders'
+      preLoaderRoute: typeof ShopOwnerOrdersRouteImport
+      parentRoute: typeof ShopOwnerRoute
+    }
     '/orders/$orderId': {
       id: '/orders/$orderId'
       path: '/orders/$orderId'
@@ -614,6 +633,7 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ShopOwnerRouteChildren {
+  ShopOwnerOrdersRoute: typeof ShopOwnerOrdersRoute
   ShopOwnerProductsRoute: typeof ShopOwnerProductsRoute
   ShopOwnerIndexRoute: typeof ShopOwnerIndexRoute
   ShopOwnerShopsNewRoute: typeof ShopOwnerShopsNewRoute
@@ -622,6 +642,7 @@ interface ShopOwnerRouteChildren {
 }
 
 const ShopOwnerRouteChildren: ShopOwnerRouteChildren = {
+  ShopOwnerOrdersRoute: ShopOwnerOrdersRoute,
   ShopOwnerProductsRoute: ShopOwnerProductsRoute,
   ShopOwnerIndexRoute: ShopOwnerIndexRoute,
   ShopOwnerShopsNewRoute: ShopOwnerShopsNewRoute,
