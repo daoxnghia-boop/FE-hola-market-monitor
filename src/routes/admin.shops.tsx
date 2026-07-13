@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { apiErrorMessage } from "@/lib/api/client";
+import { deferOpen } from "@/lib/defer-open";
 import type { ShopDto } from "@/lib/api/types";
 
 export const Route = createFileRoute("/admin/shops")({
@@ -252,33 +253,41 @@ function AdminShops() {
                               Xem chi tiết
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => openEdit(s)}>
+                          <DropdownMenuItem onSelect={() => deferOpen(() => openEdit(s))}>
                             Sửa thông tin
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {s.approvalStatus !== "approved" && (
                             <DropdownMenuItem
-                              onSelect={() => setConfirm({ shop: s, action: "approve" })}
+                              onSelect={() =>
+                                deferOpen(() => setConfirm({ shop: s, action: "approve" }))
+                              }
                             >
                               Duyệt
                             </DropdownMenuItem>
                           )}
                           {s.approvalStatus !== "rejected" && (
                             <DropdownMenuItem
-                              onSelect={() => setConfirm({ shop: s, action: "reject" })}
+                              onSelect={() =>
+                                deferOpen(() => setConfirm({ shop: s, action: "reject" }))
+                              }
                             >
                               Từ chối
                             </DropdownMenuItem>
                           )}
                           {s.operationStatus === "active" ? (
                             <DropdownMenuItem
-                              onSelect={() => setConfirm({ shop: s, action: "suspend" })}
+                              onSelect={() =>
+                                deferOpen(() => setConfirm({ shop: s, action: "suspend" }))
+                              }
                             >
                               Tạm ngưng
                             </DropdownMenuItem>
                           ) : (
                             <DropdownMenuItem
-                              onSelect={() => setConfirm({ shop: s, action: "activate" })}
+                              onSelect={() =>
+                                deferOpen(() => setConfirm({ shop: s, action: "activate" }))
+                              }
                             >
                               Kích hoạt
                             </DropdownMenuItem>
