@@ -8,7 +8,7 @@ import { formatVND } from "@/lib/domain";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { orderStatusLabel } from "@/lib/order-status";
+import { ORDER_STATUS_LABEL } from "@/lib/domain";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
