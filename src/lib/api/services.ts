@@ -3,7 +3,8 @@ import type {
   AddressDto, AdminAuditDto, AdminStatsDto, AdminUserSummaryDto,
   CartDto, CategoryDto, DeliveryZoneDto, NotificationDto, NotificationPageDto,
   OrderDetailDto, OrderSummaryDto, OtpChallengeDto, Paginated, ProductDto,
-  ReviewDto, SearchDto, SessionDto, ShopDto, UserDto, VerifyOtpResultDto, VoucherDto,
+  ReviewDto, SearchDto, SessionDto, ShopDto, ShopRegistrationInput,
+  UserDto, VerifyOtpResultDto, VoucherDto,
 } from "./types";
 
 export const authApi = {
@@ -153,4 +154,17 @@ export const adminApi = {
     apiRequest<DeliveryZoneDto>("/admin/delivery-zones", { method: "POST", body }),
   updateZone: (id: string, body: Partial<DeliveryZoneDto>) =>
     apiRequest<DeliveryZoneDto>(`/admin/delivery-zones/${id}`, { method: "PATCH", body }),
+};
+
+// ==================== SHOP OWNER ====================
+export const shopOwnerApi = {
+  shops: () => apiRequest<Paginated<ShopDto>>("/shop-owner/shops"),
+  shop: (id: string) => apiRequest<ShopDto>(`/shop-owner/shops/${id}`),
+  create: (body: ShopRegistrationInput) =>
+    apiRequest<ShopDto>("/shop-owner/shops", { method: "POST", body }),
+  update: (id: string, body: Partial<ShopDto>) =>
+    apiRequest<ShopDto>(`/shop-owner/shops/${id}`, { method: "PATCH", body }),
+  remove: (id: string) => apiRequest<void>(`/shop-owner/shops/${id}`, { method: "DELETE" }),
+  action: (id: string, action: "submit" | "pause" | "reopen") =>
+    apiRequest<ShopDto>(`/shop-owner/shops/${id}/${action}`, { method: "POST", body: {} }),
 };

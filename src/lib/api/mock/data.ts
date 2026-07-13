@@ -43,7 +43,7 @@ export const shops: ShopDto[] = [
     phone: "0912345678", openHoursText: "10:00 – 21:00",
     supportedZoneIds: ["z1", "z2", "z3"], isFavorite: false,
     approvalStatus: "approved", operationStatus: "active",
-    ownerName: "Cô Lan", ownerPhone: "0912345678", createdAt: daysAgo(120), orderCount: 340,
+    ownerId: "u-owner", ownerName: "Nguyễn Văn Lâm", ownerPhone: "0908888888", createdAt: daysAgo(120), orderCount: 340,
   },
   {
     id: "s2", slug: "bun-cha-co-ba", name: "Bún Chả Cô Ba",
@@ -115,7 +115,8 @@ export const shops: ShopDto[] = [
     phone: "0944333222", openHoursText: "10:00 – 21:00",
     supportedZoneIds: ["z3", "z4"], isFavorite: false,
     approvalStatus: "pending", operationStatus: "active",
-    ownerName: "Anh Sang", ownerPhone: "0944333222", createdAt: daysAgo(3), orderCount: 0,
+    ownerId: "u-owner", ownerName: "Nguyễn Văn Lâm", ownerPhone: "0908888888",
+    createdAt: daysAgo(3), submittedAt: daysAgo(3), orderCount: 0,
   },
   {
     id: "s8", slug: "pho-bo-hn", name: "Phở Bò Hà Nội",
@@ -127,7 +128,9 @@ export const shops: ShopDto[] = [
     phone: "0922111000", openHoursText: "06:00 – 14:00",
     supportedZoneIds: ["z1", "z3"], isFavorite: false,
     approvalStatus: "rejected", operationStatus: "active",
-    ownerName: "Cô Hoa", ownerPhone: "0922111000", createdAt: daysAgo(10), orderCount: 0,
+    ownerId: "u-owner", ownerName: "Nguyễn Văn Lâm", ownerPhone: "0908888888",
+    createdAt: daysAgo(10), submittedAt: daysAgo(10), orderCount: 0,
+    rejectionReason: "Ảnh cover không rõ, cần bổ sung giấy phép ATVSTP.",
   },
 ];
 
@@ -222,6 +225,11 @@ export const seedBlockedUser: UserDto = {
   role: "customer", status: "blocked", createdAt: daysAgo(40),
 };
 
+export const seedShopOwnerUser: UserDto = {
+  id: "u-owner", fullName: "Nguyễn Văn Lâm", phone: "0908888888",
+  email: "lam@holamarket.vn", role: "shop_owner", status: "active", createdAt: daysAgo(130),
+};
+
 // Additional mock customers
 const extraCustomers: UserDto[] = [
   ["u2", "Trần Thu Hà", "0912000001"],
@@ -244,7 +252,7 @@ const extraCustomers: UserDto[] = [
 }));
 
 export const seedUsers: UserDto[] = [
-  seedCustomerUser, seedAdminUser, seedBlockedUser, ...extraCustomers,
+  seedCustomerUser, seedAdminUser, seedBlockedUser, seedShopOwnerUser, ...extraCustomers,
 ];
 
 export const defaultUser = seedCustomerUser;

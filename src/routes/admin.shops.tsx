@@ -25,8 +25,8 @@ export const Route = createFileRoute("/admin/shops")({
   component: AdminShops,
 });
 
-const APPROVAL_LABEL = { pending: "Chờ duyệt", approved: "Đã duyệt", rejected: "Từ chối" } as const;
-const OPERATION_LABEL = { active: "Hoạt động", suspended: "Tạm ngưng" } as const;
+const APPROVAL_LABEL: Record<string, string> = { pending: "Chờ duyệt", approved: "Đã duyệt", rejected: "Từ chối", draft: "Nháp" };
+const OPERATION_LABEL: Record<string, string> = { active: "Hoạt động", suspended: "Tạm ngưng", paused: "Tạm nghỉ" };
 
 function AdminShops() {
   const [q, setQ] = useState("");
