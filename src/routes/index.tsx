@@ -199,7 +199,6 @@ function HomePage() {
         </div>
       </section>
 
-      <ProductSheet product={selected} open={sheetOpen} onOpenChange={setSheetOpen} />
       <BottomCartBar />
     </AppShell>
   );
