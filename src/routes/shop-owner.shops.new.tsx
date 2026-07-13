@@ -210,7 +210,7 @@ function NewShopPage() {
           )}
         </Section>
 
-        <Section title="Khu vực giao hàng">
+        <Section title="Khu vực giao hàng & phí giao">
           {zones.isLoading ? (
             <Skeleton className="h-10" />
           ) : (
@@ -221,7 +221,7 @@ function NewShopPage() {
                   <button
                     type="button"
                     key={z.id}
-                    onClick={() => toggle("supportedZoneIds", z.id)}
+                    onClick={() => toggleZone(z.id, z.baseDeliveryFee)}
                     className={`rounded-full border px-3 py-1.5 text-sm ${on ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"}`}
                   >
                     {z.name}
@@ -233,11 +233,45 @@ function NewShopPage() {
           {errors.supportedZoneIds && (
             <p className="text-xs text-destructive">{errors.supportedZoneIds.message}</p>
           )}
-          <p className="text-xs text-muted-foreground">
-            Bạn sẽ cấu hình phí giao riêng cho từng khu vực trong màn Phí giao hàng của quán (sắp
-            có).
-          </p>
+
+          {supportedZoneIds.length > 0 && (
+            <div className="space-y-2 rounded-xl border border-border bg-background/50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Phí giao riêng của quán (VND)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Mặc định lấy theo mức chuẩn của khu vực. Bạn có thể đặt phí riêng cho từng khu.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {zones.data
+                  ?.filter((z) => supportedZoneIds.includes(z.id))
+                  .map((z) => (
+                    <label key={z.id} className="flex items-center gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate">{z.name}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1000}
+                        className="h-9 w-28"
+                        value={deliveryFees[z.id] ?? z.baseDeliveryFee}
+                        onChange={(e) =>
+                          setValue(
+                            "deliveryFees",
+                            {
+                              ...form.getValues("deliveryFees"),
+                              [z.id]: Math.max(0, Number(e.target.value) || 0),
+                            },
+                            { shouldValidate: true },
+                          )
+                        }
+                      />
+                    </label>
+                  ))}
+              </div>
+            </div>
+          )}
         </Section>
+
 
         <label className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-card">
           <Checkbox
