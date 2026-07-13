@@ -1,10 +1,23 @@
+import type { CartDto } from "./api/types";
 import { useCartQuery } from "./api/hooks";
 
 export type { CartItemDto as CartItem } from "./api/types";
 
-export function useCart() {
+const EMPTY_CART: CartDto = {
+  id: "",
+  shop: null,
+  items: [],
+  deliveryZone: null,
+  voucher: null,
+  pricing: { subtotal: 0, discount: 0, deliveryFee: 0, total: 0 },
+  canCheckout: false,
+  blockingReasons: [],
+  updatedAt: "",
+};
+
+export function useCart(): CartDto {
   const query = useCartQuery();
-  return query.data!;
+  return query.data ?? EMPTY_CART;
 }
 
 export function useCartItems() {
