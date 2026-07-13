@@ -25,6 +25,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ShopsShopIdRouteImport } from './routes/shops.$shopId'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
 import { Route as AdminShopsRouteImport } from './routes/admin.shops'
+import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 
 const VouchersRoute = VouchersRouteImport.update({
   id: '/vouchers',
@@ -106,6 +107,11 @@ const AdminShopsRoute = AdminShopsRouteImport.update({
   path: '/shops',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminOrdersRoute = AdminOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/vouchers': typeof VouchersRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/shops': typeof AdminShopsRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/vouchers': typeof VouchersRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/shops': typeof AdminShopsRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
   '/vouchers': typeof VouchersRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/shops': typeof AdminShopsRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/search'
     | '/vouchers'
+    | '/admin/orders'
     | '/admin/shops'
     | '/orders/$orderId'
     | '/shops/$shopId'
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/search'
     | '/vouchers'
+    | '/admin/orders'
     | '/admin/shops'
     | '/orders/$orderId'
     | '/shops/$shopId'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/search'
     | '/vouchers'
+    | '/admin/orders'
     | '/admin/shops'
     | '/orders/$orderId'
     | '/shops/$shopId'
@@ -348,15 +360,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminShopsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/orders': {
+      id: '/admin/orders'
+      path: '/orders'
+      fullPath: '/admin/orders'
+      preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminOrdersRoute: typeof AdminOrdersRoute
   AdminShopsRoute: typeof AdminShopsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminOrdersRoute: AdminOrdersRoute,
   AdminShopsRoute: AdminShopsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
