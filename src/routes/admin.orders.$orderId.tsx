@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useAdminOrder } from "@/lib/api/hooks";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { formatVND } from "@/lib/domain";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { OrderTimeline } from "@/components/order-timeline";
+import { OrderDetailSkeleton, InlineFetchingBar } from "@/components/admin-skeletons";
 
 export const Route = createFileRoute("/admin/orders/$orderId")({
   component: AdminOrderDetail,
@@ -15,7 +15,7 @@ function AdminOrderDetail() {
   const { orderId } = useParams({ from: "/admin/orders/$orderId" });
   const q = useAdminOrder(orderId);
 
-  if (q.isLoading) return <Skeleton className="h-64" />;
+  if (q.isLoading) return <OrderDetailSkeleton />;
   if (!q.data) return <div className="text-sm text-muted-foreground">Không tìm thấy đơn.</div>;
   const o = q.data;
 
