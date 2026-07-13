@@ -2,8 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Receipt, Ticket, MapPin, LogIn, LogOut, ShieldCheck, Bell, Heart, User } from "lucide-react";
-import { useAddresses, useLogout, useSession } from "@/lib/api/hooks";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Receipt, Ticket, MapPin, LogIn, LogOut, ShieldCheck, Bell, Heart, User, Store, Plus, ChevronRight,
+} from "lucide-react";
+import { useAddresses, useLogout, useOwnerShops, useSession } from "@/lib/api/hooks";
 
 export const Route = createFileRoute("/account")({
   head: () => ({ meta: [{ title: "Tài khoản — HoLa Market" }] }),
@@ -18,6 +21,8 @@ function AccountPage() {
   const user = session.data?.user;
   const authed = !!user;
   const isAdmin = user?.role === "admin";
+  const ownerShops = useOwnerShops();
+  const shops = authed ? ownerShops.data ?? [] : [];
 
   const doLogout = async () => {
     await logout.mutateAsync();
