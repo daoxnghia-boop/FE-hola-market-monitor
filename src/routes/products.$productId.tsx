@@ -178,15 +178,10 @@ function ProductDetailPage() {
   const productQuery = useProduct(productId, zoneId);
   // Fall back to loader-primed product (no-zone variant) so SSR + hydration
   // paint the full page without a skeleton flash.
-  const product = productQuery.data ?? loaderProduct;
+  // Always render from loader-primed product for SSR / hydration stability.
+  // Zone-scoped delivery info swaps in when the client-side query resolves.
+  const product: ProductDetailDto = productQuery.data ?? loaderProduct;
 
-  if (!product) {
-    return (
-      <AppShell>
-        <ProductDetailSkeleton />
-      </AppShell>
-    );
-  }
 
   const shop = product.shop;
   const shopOperational =
