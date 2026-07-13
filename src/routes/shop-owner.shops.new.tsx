@@ -188,7 +188,7 @@ function NewShopPage() {
           <label className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-card">
             <Checkbox
               checked={!!acceptedTerms}
-              onCheckedChange={(v) => setValue("acceptedTerms", (v === true) as unknown as true, { shouldValidate: true })}
+              onCheckedChange={(v) => setValue("acceptedTerms", v === true, { shouldValidate: true })}
             />
             <span className="text-sm">
               Tôi đồng ý với <a href="#" className="text-primary underline">điều khoản đối tác</a> của HoLa Market
