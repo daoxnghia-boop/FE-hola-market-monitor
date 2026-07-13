@@ -1,5 +1,65 @@
 # Changelog
 
+## feat(product-reviews): add customer review submission and management
+
+### Added
+- Reusable `ProductReviewForm` component (star rating with hover preview,
+  keyboard-accessible radiogroup, rating meaning labels, 10–1000 char
+  comment with remaining count, up to 3 optional image URLs, submit +
+  cancel buttons; works in create + edit mode).
+- `ReviewInputPanel` on `/products/$productId` above the review list —
+  shows the right UI per eligibility state: guest login CTA, "chưa mua
+  hàng", "đơn chưa hoàn thành", eligible form, or an "Đánh giá của bạn"
+  card with edit/delete actions.
+- `DeleteReviewDialog` (Radix AlertDialog) — replaces `window.confirm`
+  for deleting a review.
+- Route search params on `/products/$productId?orderId=&orderItemId=` +
+  `#write-review` hash — the order-detail "Đánh giá món" button now deep
+  links here instead of opening a dialog inside the order page.
+- Mock endpoints:
+  - `GET /products/:id/review-eligibility` — returns `authenticated`,
+    `eligible`, `reason` (`not_authenticated | not_purchased |
+    order_not_completed | already_reviewed | eligible`),
+    `eligibleOrderItems[]`, `existingReview?`, `pendingOrder?`.
+  - `PATCH /product-reviews/:reviewId` — author-only edit (rating,
+    comment, imageUrls); sets `updatedAt`, recomputes product aggregates.
+  - `DELETE /product-reviews/:reviewId` — author-only; frees the
+    order-item for a fresh review and recomputes aggregates.
+- Types: `ProductReviewEligibilityDto`, `ProductReviewUpdateInput`,
+  `ProductReviewDto.updatedAt`, `ProductReviewCreateInput.orderItemId`.
+- Hooks: `useProductReviewEligibility`, `useUpdateProductReview`,
+  `useDeleteProductReview`; `useCreateProductReview` now invalidates the
+  focused surface (product detail, review list, summary, eligibility,
+  relevant order + order list).
+- Seed data: two extra completed orders for the default customer (`o3`,
+  `o4`) so `p1 — Cơm sườn nướng` demonstrates "multiple eligible
+  purchases of the same product".
+
+### Changed
+- `POST /orders/:orderId/items/:productId/review`: comment cap raised to
+  1000, images capped at 3, and error codes normalised to
+  `AUTH_REQUIRED / ORDER_NOT_OWNED / ORDER_NOT_COMPLETED /
+  PRODUCT_NOT_IN_ORDER / REVIEW_ALREADY_EXISTS / INVALID_RATING /
+  INVALID_COMMENT`.
+- `src/routes/orders.$orderId.tsx`: per-item "Đánh giá món" is now a
+  `Link` to the product page with `orderId`/`orderItemId` search params;
+  the in-order dialog is removed.
+- Query keys namespaced to `product-reviews`, `product-review-summary`,
+  `product-review-eligibility` and invalidated surgically.
+
+### Removed
+- `src/components/write-product-review-dialog.tsx` — superseded by the
+  standalone product-page review flow.
+
+### Test account
+- Customer `0900000000` / OTP `123456`.
+- Eligible product: **p1 — Cơm sườn nướng** (orders `HL2606-001`,
+  `HL2506-004` are completed and unreviewed → multi-order selector).
+
+## feat(product-detail): add standalone product page and product reviews
+
+
+
 ## feat(product-detail): add standalone product page and product reviews
 
 ### Added
