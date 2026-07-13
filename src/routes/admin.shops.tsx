@@ -2,7 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Search, MoreHorizontal } from "lucide-react";
-import { useAdminShops, useAdminShopAction } from "@/lib/api/hooks";
+import { useAdminShops, useAdminShopAction, useAdminUpdateShop } from "@/lib/api/hooks";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -71,10 +80,47 @@ function AdminShops() {
   };
   const shops = useAdminShops(params);
   const action = useAdminShopAction();
+  const updateShop = useAdminUpdateShop();
   const [confirm, setConfirm] = useState<{
     shop: ShopDto;
     action: "approve" | "reject" | "suspend" | "activate";
   } | null>(null);
+
+  const [editing, setEditing] = useState<ShopDto | null>(null);
+  const [form, setForm] = useState({ name: "", description: "", area: "", address: "" });
+
+  const openEdit = (s: ShopDto) => {
+    setEditing(s);
+    setForm({
+      name: s.name,
+      description: s.description ?? "",
+      area: s.area ?? "",
+      address: s.address ?? "",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    if (!form.name.trim()) {
+      toast.error("Tên quán bắt buộc.");
+      return;
+    }
+    try {
+      await updateShop.mutateAsync({
+        id: editing.id,
+        body: {
+          name: form.name.trim(),
+          description: form.description.trim(),
+          area: form.area.trim(),
+          address: form.address.trim(),
+        },
+      });
+      toast.success("Đã cập nhật quán.");
+      setEditing(null);
+    } catch (e) {
+      toast.error(apiErrorMessage(e));
+    }
+  };
 
   const doAction = async () => {
     if (!confirm) return;
@@ -206,6 +252,9 @@ function AdminShops() {
                               Xem chi tiết
                             </Link>
                           </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => openEdit(s)}>
+                            Sửa thông tin
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {s.approvalStatus !== "approved" && (
                             <DropdownMenuItem
@@ -269,6 +318,65 @@ function AdminShops() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa thông tin quán</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Tên quán</Label>
+              <input
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Khu vực</Label>
+              <input
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.area}
+                onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Địa chỉ</Label>
+              <input
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.address}
+                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Mô tả</Label>
+              <Textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm"
+              onClick={() => setEditing(null)}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+              onClick={saveEdit}
+              disabled={updateShop.isPending}
+            >
+              Lưu
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

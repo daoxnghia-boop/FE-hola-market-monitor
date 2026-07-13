@@ -196,6 +196,8 @@ export const adminApi = {
     apiRequest<DeliveryZoneDto>("/admin/delivery-zones", { method: "POST", body }),
   updateZone: (id: string, body: Partial<DeliveryZoneDto>) =>
     apiRequest<DeliveryZoneDto>(`/admin/delivery-zones/${id}`, { method: "PATCH", body }),
+  deleteZone: (id: string) =>
+    apiRequest<void>(`/admin/delivery-zones/${id}`, { method: "DELETE" }),
 };
 
 // ==================== SHOP OWNER ====================
