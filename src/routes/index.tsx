@@ -179,7 +179,7 @@ function HomePage() {
           ) : popular.length === 0 ? (
             <p className="text-sm text-muted-foreground">Hiện chưa có món phổ biến.</p>
           ) : (
-            popular.map((p) => <ProductCard key={p.id} product={p} onSelect={openProduct} />)
+            popular.map((p) => <ProductCard key={p.id} product={p} />)
           )}
         </div>
       </section>
