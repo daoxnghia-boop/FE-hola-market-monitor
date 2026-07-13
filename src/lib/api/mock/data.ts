@@ -5,6 +5,7 @@ import type {
   NotificationDto,
   OrderDetailDto,
   ProductDto,
+  ProductReviewDto,
   ReviewDto,
   ShopDto,
   UserDto,
@@ -43,6 +44,32 @@ export const categories: CategoryDto[] = [
 ];
 
 const img = (seed: string) => `https://picsum.photos/seed/${seed}/600/400`;
+
+// Curated stable food-photo URLs (Unsplash) per product id. If a product id
+// is missing here, we fall back to the picsum seed so the page still renders.
+const PRODUCT_IMAGES: Record<string, string> = {
+  p1: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=70", // com suon
+  p2: "https://images.unsplash.com/photo-1626082927389-6cd097cee6a6?auto=format&fit=crop&w=800&q=70", // com ga
+  p3: "https://images.unsplash.com/photo-1512003867696-6d5ce6835040?auto=format&fit=crop&w=800&q=70", // com bo
+  p4: "https://images.unsplash.com/photo-1583224964978-2359dc37e19e?auto=format&fit=crop&w=800&q=70", // bun cha
+  p5: "https://images.unsplash.com/photo-1625944228737-91e69cc93a92?auto=format&fit=crop&w=800&q=70", // nem ran
+  p6: "https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=800&q=70", // bun nem
+  p7: "https://images.unsplash.com/photo-1600891964092-4316c288032e?auto=format&fit=crop&w=800&q=70", // banh mi
+  p8: "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=70", // banh mi xiu mai
+  p9: "https://images.unsplash.com/photo-1603046891744-76a5e7dfd4cf?auto=format&fit=crop&w=800&q=70", // banh mi trung
+  p10: "https://images.unsplash.com/photo-1558857563-b371033873b5?auto=format&fit=crop&w=800&q=70", // tra sua
+  p11: "https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=800&q=70", // matcha
+  p12: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=800&q=70", // hong tra dao
+  p13: "https://images.unsplash.com/photo-1626804475297-41608ea09aeb?auto=format&fit=crop&w=800&q=70", // oc xao
+  p14: "https://images.unsplash.com/photo-1625944228742-30da8b40e30e?auto=format&fit=crop&w=800&q=70", // oc luoc
+  p15: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=70", // ca phe sua da
+  p16: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=800&q=70", // bac xiu
+  p17: "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=800&q=70", // latte
+};
+
+export const productImage = (productId: string): string =>
+  PRODUCT_IMAGES[productId] ?? img(`food-${productId}`);
+
 
 export const shops: ShopDto[] = [
   {
@@ -303,7 +330,7 @@ const P = (
   price,
   categoryId,
   description: description || name,
-  imageUrl: img(`p-${id}`),
+  imageUrl: productImage(id),
   available: true,
   prepTimeMinutes: 10,
   rating,
@@ -669,3 +696,47 @@ export const seedOrders: OrderDetailDto[] = [
     customerPhone: seedCustomerUser.phone,
   },
 ];
+
+// -------- Product-scoped reviews (independent from shop reviews) --------
+const rev = (
+  id: string,
+  productId: string,
+  shopId: string,
+  orderId: string,
+  displayName: string,
+  rating: number,
+  daysAgoN: number,
+  comment?: string,
+  reply?: string,
+): ProductReviewDto => ({
+  id,
+  productId,
+  shopId,
+  orderId,
+  orderItemId: `${orderId}:${productId}`,
+  user: { id: `pu-${id}`, displayName },
+  rating,
+  comment,
+  verifiedPurchase: true,
+  createdAt: daysAgo(daysAgoN),
+  shopReply: reply
+    ? { content: reply, createdAt: daysAgo(Math.max(0, daysAgoN - 1)) }
+    : undefined,
+});
+
+export const seedProductReviews: ProductReviewDto[] = [
+  rev("pr1", "p1", "s1", "o-seed-r1", "Minh Anh", 5, 6, "Cơm nóng, sườn thơm, ăn đã đời!", "Cảm ơn bạn nhiều nhé!"),
+  rev("pr2", "p1", "s1", "o-seed-r2", "Hà Trang", 4, 5, "Sườn ngon nhưng canh hơi nhạt."),
+  rev("pr3", "p1", "s1", "o-seed-r3", "Đức Anh", 5, 3, "Ship nhanh, còn nóng hổi."),
+  rev("pr4", "p2", "s1", "o-seed-r4", "Ngọc Lan", 5, 4, "Gà rán giòn tan, giá hợp lý."),
+  rev("pr5", "p4", "s2", "o-seed-r5", "Quang Huy", 4, 2, "Nước chấm chuẩn Hà Nội."),
+  rev("pr6", "p7", "s3", "o-seed-r6", "Thu Hiền", 5, 1, "Bánh mì pate béo ngậy, sẽ đặt lại."),
+  rev("pr7", "p10", "s4", "o-seed-r7", "Trâm Anh", 5, 1, "Trân châu dai, trà thơm."),
+  rev("pr8", "p10", "s4", "o-seed-r8", "Bảo Nam", 3, 4, "Hơi ngọt, lần sau xin 50% đường."),
+  rev("pr9", "p15", "s6", "o-seed-r9", "Việt Anh", 5, 7, "Cà phê đậm, đúng gu."),
+];
+
+/** Order items that have already been reviewed. Format: `${orderId}:${productId}`. */
+export const seedReviewedOrderItems: string[] = seedProductReviews
+  .map((r) => r.orderItemId)
+  .filter((v): v is string => Boolean(v));

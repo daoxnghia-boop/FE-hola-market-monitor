@@ -97,6 +97,82 @@ export type ProductDto = {
   soldCount: number;
 };
 
+// Detailed product for the standalone product page. Extends ProductDto with
+// pre-joined shop info, category, and delivery info scoped to a zone.
+export type ProductDetailDto = ProductDto & {
+  shop: {
+    id: string;
+    slug: string;
+    name: string;
+    logoUrl: string;
+    rating: number;
+    reviewCount: number;
+    address: string;
+    status: ShopStatus;
+    isOpen: boolean;
+    operationStatus?: ShopOperationStatus;
+    approvalStatus?: ShopApprovalStatus;
+    prepTimeMinutes: number;
+    estimatedDeliveryMinutes?: number;
+    openHoursText?: string;
+  };
+  category?: CategoryDto;
+  delivery?: {
+    supported: boolean;
+    fee: number | null;
+    estimatedDeliveryMinutes?: number;
+    minimumOrderAmount?: number;
+    reason?: string;
+  };
+};
+
+// Product-scoped review (independent from shop/order reviews).
+export type ProductReviewDto = {
+  id: string;
+  productId: string;
+  shopId: string;
+  orderId: string;
+  orderItemId?: string;
+  user: { id: string; displayName: string; avatarUrl?: string };
+  rating: number;
+  comment?: string;
+  imageUrls?: string[];
+  verifiedPurchase: boolean;
+  createdAt: string;
+  shopReply?: { content: string; createdAt: string };
+};
+
+export type ProductRatingDistribution = {
+  1: number;
+  2: number;
+  3: number;
+  4: number;
+  5: number;
+};
+
+export type ProductReviewSummaryDto = {
+  averageRating: number;
+  totalReviews: number;
+  ratingDistribution: ProductRatingDistribution;
+};
+
+export type ProductReviewSort = "latest" | "highest" | "lowest";
+
+export type ProductReviewListParams = {
+  rating?: number;
+  sort?: ProductReviewSort;
+  pageSize?: number;
+  cursor?: string;
+};
+
+export type ProductReviewListDto = Paginated<ProductReviewDto>;
+
+export type ProductReviewCreateInput = {
+  rating: number;
+  comment?: string;
+  imageUrls?: string[];
+};
+
 export type VoucherStatus =
   | "usable"
   | "soon_expire"
@@ -241,8 +317,12 @@ export type OrderDetailDto = OrderSummaryDto & {
   statusHistory: Array<{ status: OrderStatus; occurredAt: string; note?: string }>;
   cancellation?: { reason?: string; canceledAt: string; canceledBy: string };
   review?: ReviewDto;
+  /** Product IDs (in this order) the customer has already product-reviewed. */
+  reviewedProductIds?: string[];
   customerId?: string;
 };
+
+// (marker) — types above extended for product-scoped review tracking.
 
 export type NotificationType = "order" | "voucher" | "shop" | "system";
 

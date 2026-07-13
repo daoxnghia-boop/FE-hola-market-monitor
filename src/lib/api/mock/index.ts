@@ -12,8 +12,15 @@ import type {
   OrderDetailDto,
   OrderSummaryDto,
   OrderStatus,
+  ProductDetailDto,
   ProductDto,
   ProductInput,
+  ProductRatingDistribution,
+  ProductReviewCreateInput,
+  ProductReviewDto,
+  ProductReviewListDto,
+  ProductReviewSort,
+  ProductReviewSummaryDto,
   ReviewDto,
   SessionDto,
   ShopDto,
@@ -28,6 +35,8 @@ import {
   products as seedProducts,
   seedNotifications,
   seedOrders,
+  seedProductReviews,
+  seedReviewedOrderItems,
   seedReviews,
   seedUsers,
   shops as seedShops,
@@ -37,7 +46,7 @@ import {
 
 type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
-const STORAGE_KEY = "hola-mock-state-v5";
+const STORAGE_KEY = "hola-mock-state-v6";
 
 type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
 
@@ -52,6 +61,8 @@ type State = {
   orders: OrderDetailDto[];
   notifications: NotificationDto[];
   reviews: ReviewDto[];
+  productReviews: ProductReviewDto[];
+  reviewedOrderItems: string[];
   shops: ShopDto[];
   products: ProductDto[];
   categories: CategoryDto[];
@@ -84,6 +95,8 @@ const initialState = (): State => ({
   orders: seedOrders.map((o) => ({ ...o })),
   notifications: [...seedNotifications],
   reviews: [...seedReviews],
+  productReviews: seedProductReviews.map((r) => ({ ...r })),
+  reviewedOrderItems: [...seedReviewedOrderItems],
   shops: seedShops.map((s) => ({ ...s })),
   products: seedProducts.map((p) => ({ ...p })),
   categories: seedCategories.map((c) => ({ ...c })),
@@ -234,6 +247,156 @@ function decorateShop(s: ShopDto, zoneId?: string): ShopDto {
     delivery: zone ? { supported: fee !== null, fee } : s.delivery,
   };
 }
+
+function shopMiniFor(shop: ShopDto): ProductDetailDto["shop"] {
+  return {
+    id: shop.id,
+    slug: shop.slug,
+    name: shop.name,
+    logoUrl: shop.logoUrl,
+    rating: shop.rating,
+    reviewCount: shop.reviewCount,
+    address: shop.address,
+    status: shop.status,
+    isOpen: shop.isOpen,
+    operationStatus: shop.operationStatus,
+    approvalStatus: shop.approvalStatus,
+    prepTimeMinutes: shop.prepTimeMinutes,
+    estimatedDeliveryMinutes: shop.estimatedDeliveryMinutes,
+    openHoursText: shop.openHoursText,
+  };
+}
+
+function decorateProductDetail(p: ProductDto, zoneId?: string): ProductDetailDto {
+  const shop = state.shops.find((s) => s.id === p.shopId);
+  const zone = zoneId ? (state.zones.find((z) => z.id === zoneId) ?? null) : null;
+  const category = state.categories.find((c) => c.id === p.categoryId);
+  const fee = shop && zone ? shopDeliveryFee(shop, zone) : null;
+  const supported = shop && zone ? shop.supportedZoneIds.includes(zone.id) : false;
+  const delivery = zone && shop
+    ? {
+        supported,
+        fee,
+        estimatedDeliveryMinutes: shop.estimatedDeliveryMinutes,
+        reason: !supported ? "Quán chưa giao tới khu vực này." : undefined,
+      }
+    : undefined;
+  const fallbackShop: ProductDetailDto["shop"] = shop
+    ? shopMiniFor(shop)
+    : {
+        id: p.shopId,
+        slug: p.shopId,
+        name: "Quán đã ngừng hoạt động",
+        logoUrl: "",
+        rating: 0,
+        reviewCount: 0,
+        address: "",
+        status: "closed",
+        isOpen: false,
+        prepTimeMinutes: 0,
+      };
+  return { ...p, shop: fallbackShop, category, delivery };
+}
+
+// --- Product review helpers ---
+function listProductReviews(
+  productId: string,
+  query: Record<string, string>,
+): ProductReviewListDto {
+  let list = state.productReviews.filter((r) => r.productId === productId);
+  if (query.rating) {
+    const rating = Number(query.rating);
+    if (rating >= 1 && rating <= 5) list = list.filter((r) => r.rating === rating);
+  }
+  const sort = (query.sort as ProductReviewSort | undefined) ?? "latest";
+  if (sort === "highest") list.sort((a, b) => b.rating - a.rating);
+  else if (sort === "lowest") list.sort((a, b) => a.rating - b.rating);
+  else list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  const pageSize = query.pageSize ? Math.max(1, Number(query.pageSize)) : list.length;
+  return { items: list.slice(0, pageSize), nextCursor: null };
+}
+
+function productReviewSummary(productId: string): ProductReviewSummaryDto {
+  const list = state.productReviews.filter((r) => r.productId === productId);
+  const dist: ProductRatingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const r of list) {
+    const key = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
+    dist[key] += 1;
+  }
+  const total = list.length;
+  const avg = total > 0
+    ? Math.round((list.reduce((s, r) => s + r.rating, 0) / total) * 10) / 10
+    : 0;
+  return { averageRating: avg, totalReviews: total, ratingDistribution: dist };
+}
+
+function withReviewedProductIds(o: OrderDetailDto): OrderDetailDto {
+  const ids = o.items
+    .map((it) => it.productId)
+    .filter((pid) => state.reviewedOrderItems.includes(`${o.id}:${pid}`));
+  return { ...o, reviewedProductIds: ids };
+}
+
+function recomputeProductAggregates(productId: string) {
+  const summary = productReviewSummary(productId);
+  const idx = state.products.findIndex((p) => p.id === productId);
+  if (idx >= 0) {
+    state.products[idx] = {
+      ...state.products[idx],
+      rating: summary.averageRating,
+      reviewCount: summary.totalReviews,
+    };
+  }
+}
+
+function sameShopProducts(current: ProductDto, limit: number): ProductDto[] {
+  const shop = state.shops.find((s) => s.id === current.shopId);
+  if (!shop) return [];
+  const active =
+    shop.approvalStatus === "approved" && shop.operationStatus === "active";
+  if (!active) return [];
+  const siblings = state.products.filter(
+    (p) => p.shopId === current.shopId && p.id !== current.id && p.available,
+  );
+  const sameCategory = siblings.filter((p) => p.categoryId === current.categoryId);
+  const others = siblings
+    .filter((p) => p.categoryId !== current.categoryId)
+    .sort((a, b) => b.soldCount - a.soldCount);
+  return [...sameCategory, ...others].slice(0, limit);
+}
+
+function relatedProducts(
+  current: ProductDto,
+  zoneId: string | undefined,
+  limit: number,
+): ProductDto[] {
+  const activeShopIds = new Set(
+    state.shops
+      .filter(
+        (s) =>
+          s.approvalStatus === "approved" &&
+          s.operationStatus === "active" &&
+          (!zoneId || s.supportedZoneIds.includes(zoneId)),
+      )
+      .map((s) => s.id),
+  );
+  const pool = state.products.filter(
+    (p) =>
+      p.id !== current.id &&
+      p.shopId !== current.shopId &&
+      p.categoryId === current.categoryId &&
+      p.available &&
+      activeShopIds.has(p.shopId),
+  );
+  const priceLo = current.price * 0.6;
+  const priceHi = current.price * 1.4;
+  const score = (p: ProductDto) => {
+    const inRange = p.price >= priceLo && p.price <= priceHi ? 1 : 0;
+    return inRange * 1000 + (p.rating || 0) * 10 + Math.min(p.soldCount, 999) / 1000;
+  };
+  return pool.sort((a, b) => score(b) - score(a)).slice(0, limit);
+}
+
 
 
 function paginate<T>(list: T[], pageSize?: string) {
@@ -499,11 +662,44 @@ async function route(ctx: Ctx): Promise<unknown> {
     if (query.categoryId) list = list.filter((p) => p.categoryId === query.categoryId);
     return ok(paginate(list, query.pageSize));
   }
+  // Product review endpoints (declare before the generic /products/:id).
+  const prodReviewsMatch = path.match(/^\/products\/([^/]+)\/reviews$/);
+  if (prodReviewsMatch && method === "GET") {
+    const productId = prodReviewsMatch[1];
+    if (!state.products.some((p) => p.id === productId))
+      notFound("Không tìm thấy sản phẩm.");
+    return ok(listProductReviews(productId, query));
+  }
+  const prodReviewSummaryMatch = path.match(/^\/products\/([^/]+)\/review-summary$/);
+  if (prodReviewSummaryMatch && method === "GET") {
+    const productId = prodReviewSummaryMatch[1];
+    if (!state.products.some((p) => p.id === productId))
+      notFound("Không tìm thấy sản phẩm.");
+    return ok(productReviewSummary(productId));
+  }
+  const prodRelatedMatch = path.match(/^\/products\/([^/]+)\/related$/);
+  if (prodRelatedMatch && method === "GET") {
+    const productId = prodRelatedMatch[1];
+    const current = state.products.find((p) => p.id === productId);
+    if (!current) notFound("Không tìm thấy sản phẩm.");
+    const limit = Number(query.limit ?? 8);
+    return ok({
+      items: relatedProducts(current!, query.deliveryZoneId, limit),
+    });
+  }
+  const prodSameShopMatch = path.match(/^\/products\/([^/]+)\/same-shop$/);
+  if (prodSameShopMatch && method === "GET") {
+    const productId = prodSameShopMatch[1];
+    const current = state.products.find((p) => p.id === productId);
+    if (!current) notFound("Không tìm thấy sản phẩm.");
+    const limit = Number(query.limit ?? 8);
+    return ok({ items: sameShopProducts(current!, limit) });
+  }
   const prodMatch = path.match(/^\/products\/([^/]+)$/);
   if (prodMatch && method === "GET") {
     const p = state.products.find((x) => x.id === prodMatch[1]);
     if (!p) notFound("Không tìm thấy sản phẩm.");
-    return ok(p);
+    return ok(decorateProductDetail(p!, query.deliveryZoneId));
   }
   if (M === "GET /products/popular") {
     const limit = Number(query.limit ?? 6);
@@ -650,7 +846,7 @@ async function route(ctx: Ctx): Promise<unknown> {
     const o = state.orders.find((x) => x.id === orderMatch[1]);
     if (!o) notFound("Không tìm thấy đơn hàng.");
     if (o!.customerId && o!.customerId !== u.id && u.role !== "admin") forbidden();
-    return ok(o);
+    return ok(withReviewedProductIds(o!));
   }
   if (M === "POST /orders") {
     const u = requireActiveUser();
@@ -793,6 +989,58 @@ async function route(ctx: Ctx): Promise<unknown> {
     save();
     return ok(review);
   }
+  // POST /orders/:orderId/items/:productId/review — product-scoped review.
+  const prodReviewCreateMatch = path.match(
+    /^\/orders\/([^/]+)\/items\/([^/]+)\/review$/,
+  );
+  if (prodReviewCreateMatch && method === "POST") {
+    const u = requireActiveUser();
+    const orderId = prodReviewCreateMatch[1];
+    const productId = prodReviewCreateMatch[2];
+    const o = state.orders.find((x) => x.id === orderId);
+    if (!o) notFound("Không tìm thấy đơn hàng.");
+    if (o!.customerId && o!.customerId !== u.id)
+      forbidden("Đơn hàng không thuộc về bạn.");
+    if (o!.status !== "hoan_thanh")
+      badRequest(
+        "ORDER_NOT_COMPLETED",
+        "Chỉ có thể đánh giá sau khi đơn hàng hoàn thành.",
+      );
+    const item = o!.items.find((it) => it.productId === productId);
+    if (!item) notFound("Món ăn không có trong đơn hàng này.");
+    const key = `${orderId}:${productId}`;
+    if (state.reviewedOrderItems.includes(key))
+      conflict(
+        "PRODUCT_ALREADY_REVIEWED",
+        "Bạn đã đánh giá món này trong đơn hàng này rồi.",
+      );
+    const b = body as ProductReviewCreateInput;
+    const rating = Number(b?.rating);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5)
+      badRequest("INVALID_RATING", "Số sao phải là số nguyên từ 1 đến 5.");
+    const comment = typeof b?.comment === "string" ? b.comment.trim() : undefined;
+    if (comment && comment.length > 500)
+      badRequest("COMMENT_TOO_LONG", "Nội dung tối đa 500 ký tự.");
+    const review: ProductReviewDto = {
+      id: `pr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      productId,
+      shopId: o!.shopId,
+      orderId,
+      orderItemId: key,
+      user: { id: u.id, displayName: u.fullName, avatarUrl: u.avatarUrl },
+      rating,
+      comment: comment || undefined,
+      imageUrls: Array.isArray(b?.imageUrls) ? b.imageUrls.slice(0, 6) : undefined,
+      verifiedPurchase: true,
+      createdAt: new Date().toISOString(),
+    };
+    state.productReviews = [review, ...state.productReviews];
+    state.reviewedOrderItems = [...state.reviewedOrderItems, key];
+    recomputeProductAggregates(productId);
+    save();
+    return ok(review);
+  }
+
 
   // notifications (user)
   if (M === "GET /notifications") {
