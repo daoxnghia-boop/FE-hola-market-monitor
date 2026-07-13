@@ -118,7 +118,6 @@ function NewShopPage() {
     });
   };
 
-
   return (
     <div className="px-4 py-5">
       <div className="mb-4 flex items-center gap-2">
@@ -271,7 +270,6 @@ function NewShopPage() {
             </div>
           )}
         </Section>
-
 
         <label className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-card">
           <Checkbox

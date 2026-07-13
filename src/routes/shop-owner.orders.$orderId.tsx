@@ -141,10 +141,7 @@ function OrderDetailPage() {
               {o.status === "quan_da_xac_nhan" && (
                 <Button
                   onClick={() =>
-                    runAction(
-                      () => startPreparing.mutateAsync(orderId),
-                      "Đã bắt đầu chuẩn bị món.",
-                    )
+                    runAction(() => startPreparing.mutateAsync(orderId), "Đã bắt đầu chuẩn bị món.")
                   }
                   disabled={pendingAny}
                 >

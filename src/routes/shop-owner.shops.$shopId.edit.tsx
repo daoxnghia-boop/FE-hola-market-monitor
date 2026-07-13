@@ -15,7 +15,6 @@ import { useRequireAuth } from "@/lib/require-auth";
 import { apiErrorMessage } from "@/lib/api/client";
 import { formatVND } from "@/lib/domain";
 
-
 export const Route = createFileRoute("/shop-owner/shops/$shopId/edit")({
   head: () => ({ meta: [{ title: "Sửa gian hàng — HoLa Market" }] }),
   component: EditShopPage,
@@ -47,8 +46,6 @@ function EditShopPage() {
   // Managed separately from RHF because supportedZoneIds/deliveryFees are edited via checkbox UI.
   const [supportedZoneIds, setSupportedZoneIds] = useState<string[]>([]);
   const [deliveryFees, setDeliveryFees] = useState<Record<string, number>>({});
-
-
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -123,8 +120,6 @@ function EditShopPage() {
     }
   };
 
-
-
   return (
     <div className="px-4 py-5">
       <div className="mb-4 flex items-center gap-2">
@@ -181,7 +176,8 @@ function EditShopPage() {
                 Khu vực giao & phí giao riêng
               </h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                Bật/tắt khu vực và đặt phí giao dành cho quán của bạn. Nếu để trống, hệ thống sẽ dùng phí chuẩn của khu.
+                Bật/tắt khu vực và đặt phí giao dành cho quán của bạn. Nếu để trống, hệ thống sẽ
+                dùng phí chuẩn của khu.
               </p>
             </div>
             {zones.isLoading ? (
@@ -237,12 +233,12 @@ function EditShopPage() {
             {update.isPending ? "Đang lưu..." : "Lưu thay đổi"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Đổi danh mục hoặc chủ quán vẫn cần chờ đợt sau. Cập nhật phí giao có hiệu lực ngay khi lưu.
+            Đổi danh mục hoặc chủ quán vẫn cần chờ đợt sau. Cập nhật phí giao có hiệu lực ngay khi
+            lưu.
           </p>
         </form>
       )}
     </div>
-
   );
 }
 

@@ -1586,10 +1586,7 @@ async function route(ctx: Ctx): Promise<unknown> {
       canceledAt: now,
       canceledBy: `shop:${user.fullName}`,
     };
-    o!.statusHistory = [
-      ...o!.statusHistory,
-      { status: "da_huy", occurredAt: now, note: b.reason },
-    ];
+    o!.statusHistory = [...o!.statusHistory, { status: "da_huy", occurredAt: now, note: b.reason }];
     if (o!.customerId) {
       state.notifications = [
         {

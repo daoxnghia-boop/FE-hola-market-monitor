@@ -84,9 +84,7 @@ export function ProductCard({
           />
           <div className="flex min-w-0 flex-1 flex-col">
             <h4 className="line-clamp-1 font-semibold">{product.name}</h4>
-            <p className="line-clamp-2 text-xs text-muted-foreground">
-              {product.description}
-            </p>
+            <p className="line-clamp-2 text-xs text-muted-foreground">{product.description}</p>
             <div className="mt-auto pt-2">
               <span className="font-bold text-primary">{formatVND(product.price)}</span>
             </div>
@@ -133,12 +131,8 @@ export function ProductCard({
           imageClassName="transition group-hover:scale-[1.03]"
         />
         <div className="space-y-1 p-3">
-          <h4 className="line-clamp-2 text-sm font-semibold min-h-[2.5rem]">
-            {product.name}
-          </h4>
-          <p className="line-clamp-1 text-xs text-muted-foreground">
-            Đã bán {product.soldCount}
-          </p>
+          <h4 className="line-clamp-2 text-sm font-semibold min-h-[2.5rem]">{product.name}</h4>
+          <p className="line-clamp-1 text-xs text-muted-foreground">Đã bán {product.soldCount}</p>
           <div className="font-bold text-primary">{formatVND(product.price)}</div>
         </div>
       </Link>

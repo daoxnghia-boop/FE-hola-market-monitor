@@ -207,7 +207,10 @@ function CheckoutPage() {
                 accent="success"
               />
             )}
-            <Row label={`Phí ship${shop ? ` (giao bởi ${shop.name})` : ""}`} value={formatVND(pricing.shipFee)} />
+            <Row
+              label={`Phí ship${shop ? ` (giao bởi ${shop.name})` : ""}`}
+              value={formatVND(pricing.shipFee)}
+            />
             <div className="my-2 border-t border-dashed" />
             <Row label="Tổng cần trả" value={formatVND(pricing.total)} bold />
           </div>
