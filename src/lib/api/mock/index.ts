@@ -1104,7 +1104,7 @@ async function route(ctx: Ctx): Promise<unknown> {
     const b = body as ProductReviewCreateInput;
     const rating = Number(b?.rating);
     if (!Number.isInteger(rating) || rating < 1 || rating > 5)
-      apiError("422" as unknown as number, "INVALID_RATING", "Số sao phải là số nguyên từ 1 đến 5.") as never;
+      apiError(422, "INVALID_RATING", "Số sao phải là số nguyên từ 1 đến 5.");
     const comment = typeof b?.comment === "string" ? b.comment.trim() : undefined;
     if (comment && comment.length > 1000)
       apiError(422, "INVALID_COMMENT", "Nội dung tối đa 1000 ký tự.");
