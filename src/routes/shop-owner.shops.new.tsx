@@ -31,14 +31,14 @@ const schema = z.object({
   phone: z.string().trim().regex(phoneRegex, "SĐT liên hệ chưa hợp lệ"),
   address: z.string().trim().min(4, "Vui lòng nhập địa chỉ"),
   area: z.string().trim().min(1, "Vui lòng nhập khu vực"),
-  description: z.string().trim().max(400, "Tối đa 400 ký tự").optional().default(""),
-  logoUrl: z.string().trim().url("URL logo không hợp lệ").optional().or(z.literal("")),
-  coverUrl: z.string().trim().url("URL ảnh bìa không hợp lệ").optional().or(z.literal("")),
+  description: z.string().trim().max(400, "Tối đa 400 ký tự"),
+  logoUrl: z.string().trim().url("URL logo không hợp lệ").or(z.literal("")),
+  coverUrl: z.string().trim().url("URL ảnh bìa không hợp lệ").or(z.literal("")),
   openHoursText: z.string().trim().min(1, "Vui lòng nhập giờ mở cửa"),
   prepTimeMinutes: z.coerce.number().int().min(1, "Phải > 0").max(180, "Tối đa 180 phút"),
   categoryIds: z.array(z.string()).min(1, "Chọn ít nhất 1 danh mục"),
   supportedZoneIds: z.array(z.string()).min(1, "Chọn ít nhất 1 khu vực giao"),
-  acceptedTerms: z.literal(true, { errorMap: () => ({ message: "Bạn cần đồng ý điều khoản" }) }),
+  acceptedTerms: z.boolean().refine((v) => v === true, "Bạn cần đồng ý điều khoản"),
 });
 
 type FormValues = z.infer<typeof schema>;
