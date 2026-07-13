@@ -132,9 +132,7 @@ function Dashboard() {
             )}
           </div>
           <Button asChild variant="ghost" size="sm">
-            <Link to="/shop-owner/orders" search={{ status: "cho_quan_xac_nhan" } as never}>
-              Xem tất cả
-            </Link>
+            <Link to="/shop-owner/orders">Xem tất cả</Link>
           </Button>
         </div>
         {pendingOrders.isLoading ? (
