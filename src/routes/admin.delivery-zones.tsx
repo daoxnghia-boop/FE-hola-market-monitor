@@ -151,13 +151,13 @@ function AdminZones() {
                       shortName: shortName.trim(),
                       baseDeliveryFee: fee,
                     });
-                    toast.success("Đã tạo khu vực.");
+                    toast.success("Đã tạo khu vực", { description: name.trim() });
                     setOpen(false);
                     setName("");
                     setShortName("");
                     setFee(15000);
                   } catch (e) {
-                    toast.error(apiErrorMessage(e));
+                    toast.error("Tạo khu vực thất bại", { description: apiErrorMessage(e) });
                   }
                 }}
                 disabled={create.isPending}
