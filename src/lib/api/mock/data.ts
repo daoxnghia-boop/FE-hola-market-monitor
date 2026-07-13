@@ -65,6 +65,8 @@ export const shops: ShopDto[] = [
     phone: "0912345678",
     openHoursText: "10:00 – 21:00",
     supportedZoneIds: ["z1", "z2", "z3"],
+    deliveryFees: { z1: 8000, z2: 12000, z3: 18000 },
+
     isFavorite: false,
     approvalStatus: "approved",
     operationStatus: "active",
@@ -94,6 +96,8 @@ export const shops: ShopDto[] = [
     phone: "0987654321",
     openHoursText: "09:00 – 20:00",
     supportedZoneIds: ["z1", "z3", "z4"],
+    deliveryFees: { z1: 15000, z3: 12000, z4: 15000 },
+
     isFavorite: true,
     approvalStatus: "approved",
     operationStatus: "active",
@@ -122,6 +126,8 @@ export const shops: ShopDto[] = [
     phone: "0901112233",
     openHoursText: "06:00 – 22:00",
     supportedZoneIds: ["z1", "z2"],
+    deliveryFees: { z1: 10000, z2: 8000 },
+
     isFavorite: false,
     approvalStatus: "approved",
     operationStatus: "active",
@@ -150,6 +156,8 @@ export const shops: ShopDto[] = [
     phone: "0977888999",
     openHoursText: "08:00 – 22:30",
     supportedZoneIds: ["z1", "z2", "z3"],
+    deliveryFees: { z1: 12000, z2: 14000, z3: 10000 },
+
     isFavorite: false,
     approvalStatus: "approved",
     operationStatus: "active",
@@ -206,6 +214,8 @@ export const shops: ShopDto[] = [
     phone: "0933222111",
     openHoursText: "07:00 – 21:00",
     supportedZoneIds: ["z1", "z2"],
+    deliveryFees: { z1: 8000, z2: 10000 },
+
     isFavorite: false,
     approvalStatus: "approved",
     operationStatus: "active",
