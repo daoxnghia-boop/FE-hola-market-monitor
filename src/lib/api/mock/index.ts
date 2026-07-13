@@ -833,6 +833,7 @@ async function route(ctx: Ctx): Promise<unknown> {
         prepTimeMinutes: number;
         categoryIds: string[];
         supportedZoneIds: string[];
+        deliveryFees?: Record<string, number>;
         acceptedTerms: boolean;
       };
       if (!b?.acceptedTerms) badRequest("TERMS_REQUIRED", "Bạn cần đồng ý điều khoản.");
@@ -886,6 +887,7 @@ async function route(ctx: Ctx): Promise<unknown> {
         createdAt: now,
         submittedAt: now,
         orderCount: 0,
+        deliveryFees: sanitizeDeliveryFees(b.deliveryFees, b.supportedZoneIds),
       };
       state.shops = [shop, ...state.shops];
       // Promote user to shop_owner on first registration
