@@ -248,7 +248,7 @@ function AdminShops() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={s.operationStatus === "active" ? "outline" : "destructive"}>
+                      <Badge variant={OPERATION_TONE[s.operationStatus ?? "active"]}>
                         {OPERATION_LABEL[s.operationStatus ?? "active"]}
                       </Badge>
                     </TableCell>
