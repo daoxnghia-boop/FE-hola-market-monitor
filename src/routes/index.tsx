@@ -148,7 +148,8 @@ function HomePage() {
               <p className="text-sm text-muted-foreground">Đang tải gợi ý...</p>
             ) : (
               frequentProducts.map((p) => (
-                <ProductCard key={p.id} product={p} onSelect={openProduct} />
+                <ProductCard key={p.id} product={p} />
+
               ))
             )}
           </div>
