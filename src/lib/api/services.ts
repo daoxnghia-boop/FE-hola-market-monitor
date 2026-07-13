@@ -178,6 +178,13 @@ export const reviewApi = {
       `/orders/${orderId}/items/${productId}/review`,
       { method: "POST", body },
     ),
+  updateProductReview: (reviewId: string, body: ProductReviewUpdateInput) =>
+    apiRequest<ProductReviewDto>(`/product-reviews/${reviewId}`, {
+      method: "PATCH",
+      body,
+    }),
+  deleteProductReview: (reviewId: string) =>
+    apiRequest<void>(`/product-reviews/${reviewId}`, { method: "DELETE" }),
 };
 
 export const notificationApi = {
