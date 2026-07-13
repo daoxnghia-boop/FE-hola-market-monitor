@@ -76,10 +76,6 @@ function ShopDetailPage() {
     );
   const shopOpen = shop.status === "open" && shop.isOpen;
   const canOrder = shopOpen && supported;
-  const openProduct = (p: ProductDto) => {
-    setSelected(p);
-    setSheetOpen(true);
-  };
 
   const productDisabledLabel = !shopOpen
     ? shop.status === "out_of_menu"
