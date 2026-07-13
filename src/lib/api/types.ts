@@ -139,8 +139,10 @@ export type ProductReviewDto = {
   imageUrls?: string[];
   verifiedPurchase: boolean;
   createdAt: string;
+  updatedAt?: string;
   shopReply?: { content: string; createdAt: string };
 };
+
 
 export type ProductRatingDistribution = {
   1: number;
