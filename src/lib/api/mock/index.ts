@@ -1,27 +1,26 @@
-// Mock API router. Intercepts apiRequest calls when VITE_USE_MOCK_API is enabled
-// (default in dev when no real backend is configured).
+// Mock API router. Intercepts apiRequest when VITE_USE_MOCK_API is enabled.
 import type {
-  AddressDto, CartDto, CartItemDto, DeliveryZoneDto, NotificationDto,
-  OrderDetailDto, OrderSummaryDto, ProductDto, ReviewDto, SessionDto,
-  ShopDto, VoucherDto,
+  AddressDto, AdminAuditDto, AdminStatsDto, AdminUserSummaryDto,
+  CartDto, CartItemDto, CategoryDto, DeliveryZoneDto,
+  NotificationDto, OrderDetailDto, OrderSummaryDto, OrderStatus,
+  ProductDto, ReviewDto, SessionDto, ShopDto, UserDto, VoucherDto,
 } from "../types";
 import {
-  categories, defaultAddresses, defaultUser, products, seedNotifications,
-  seedOrders, seedReviews, shops, vouchers, zones,
+  categories as seedCategories, defaultAddresses, defaultUser, products,
+  seedNotifications, seedOrders, seedReviews, seedUsers, shops as seedShops,
+  vouchers as seedVouchers, zones as seedZones,
 } from "./data";
 
-type Ctx = {
-  method: string;
-  path: string;
-  query: Record<string, string>;
-  body: unknown;
-};
+type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
-const STORAGE_KEY = "hola-mock-state-v1";
+const STORAGE_KEY = "hola-mock-state-v2";
+
+type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
 
 type State = {
   authenticated: boolean;
-  user: typeof defaultUser | null;
+  currentUserId: string | null;
+  users: UserDto[];
   addresses: AddressDto[];
   favoriteShopIds: string[];
   cart: CartDto;
@@ -29,6 +28,11 @@ type State = {
   orders: OrderDetailDto[];
   notifications: NotificationDto[];
   reviews: ReviewDto[];
+  shops: ShopDto[];
+  categories: CategoryDto[];
+  zones: DeliveryZoneDto[];
+  audits: AdminAuditDto[];
+  otpChallenges: OtpChallenge[];
   browsingZoneId: string;
 };
 
@@ -40,14 +44,20 @@ const emptyCart = (): CartDto => ({
 
 const initialState = (): State => ({
   authenticated: true,
-  user: defaultUser,
+  currentUserId: defaultUser.id,
+  users: seedUsers.map((u) => ({ ...u })),
   addresses: [...defaultAddresses],
-  favoriteShopIds: shops.filter((s) => s.isFavorite).map((s) => s.id),
+  favoriteShopIds: seedShops.filter((s) => s.isFavorite).map((s) => s.id),
   cart: emptyCart(),
-  vouchers: [...vouchers],
+  vouchers: seedVouchers.map((v) => ({ ...v })),
   orders: seedOrders.map((o) => ({ ...o })),
   notifications: [...seedNotifications],
   reviews: [...seedReviews],
+  shops: seedShops.map((s) => ({ ...s })),
+  categories: seedCategories.map((c) => ({ ...c })),
+  zones: seedZones.map((z) => ({ ...z })),
+  audits: [],
+  otpChallenges: [],
   browsingZoneId: "z1",
 });
 
@@ -60,9 +70,7 @@ function load(): State {
     if (!raw) return initialState();
     const parsed = JSON.parse(raw) as Partial<State>;
     return { ...initialState(), ...parsed };
-  } catch {
-    return initialState();
-  }
+  } catch { return initialState(); }
 }
 
 function save() {
@@ -74,20 +82,75 @@ function delay(ms = 220) {
   return new Promise<void>((r) => setTimeout(r, ms + Math.random() * 180));
 }
 
+// -------- errors --------
+function apiError(status: number, code: string, message: string): never {
+  const err = new Error(message) as Error & { __apiStatus: number; __apiCode: string };
+  err.__apiStatus = status; err.__apiCode = code;
+  throw err;
+}
+const notFound = (m = "Không tìm thấy tài nguyên.") => apiError(404, "NOT_FOUND", m);
+const conflict = (code: string, m: string) => apiError(409, code, m);
+const badRequest = (code: string, m: string) => apiError(400, code, m);
+const unauthorized = (m = "Vui lòng đăng nhập.") => apiError(401, "UNAUTHORIZED", m);
+const forbidden = (m = "Bạn không có quyền truy cập.") => apiError(403, "FORBIDDEN", m);
+const locked = (m = "Tài khoản đang bị khóa.") => apiError(423, "ACCOUNT_BLOCKED", m);
+
+// -------- auth guards --------
+function currentUser(): UserDto | null {
+  if (!state.authenticated || !state.currentUserId) return null;
+  return state.users.find((u) => u.id === state.currentUserId) ?? null;
+}
+function requireAuthenticated(): UserDto {
+  const u = currentUser();
+  if (!u) unauthorized();
+  return u!;
+}
+function requireActiveUser(): UserDto {
+  const u = requireAuthenticated();
+  if (u.status === "blocked") locked();
+  return u;
+}
+function requireAdmin(): UserDto {
+  const u = requireActiveUser();
+  if (u.role !== "admin") forbidden("Chỉ dành cho quản trị viên.");
+  return u;
+}
+
+function audit(action: string, entityType: string, entityId: string, reason?: string) {
+  const admin = currentUser();
+  state.audits = [
+    {
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      action, entityType, entityId,
+      adminUserId: admin?.id ?? "",
+      adminName: admin?.fullName ?? "",
+      reason, createdAt: new Date().toISOString(),
+    },
+    ...state.audits,
+  ].slice(0, 200);
+}
+
+// -------- helpers --------
+function normalizePhone(raw: string): string {
+  const digits = String(raw ?? "").replace(/[\s.-]/g, "");
+  return digits;
+}
+function isValidVNPhone(p: string): boolean {
+  return /^0\d{9}$/.test(p);
+}
+
 function decorateShop(s: ShopDto, zoneId?: string): ShopDto {
   const isFav = state.favoriteShopIds.includes(s.id);
-  const zone = zoneId ? zones.find((z) => z.id === zoneId) : null;
+  const zone = zoneId ? state.zones.find((z) => z.id === zoneId) : null;
   const supported = zone ? s.supportedZoneIds.includes(zone.id) : true;
   return {
     ...s,
     isFavorite: isFav,
-    delivery: zone
-      ? { supported, fee: supported ? zone.baseDeliveryFee : null }
-      : s.delivery,
+    delivery: zone ? { supported, fee: supported ? zone.baseDeliveryFee : null } : s.delivery,
   };
 }
 
-function paginate<T>(list: T[], pageSize?: string, _cursor?: string) {
+function paginate<T>(list: T[], pageSize?: string) {
   const size = pageSize ? Number(pageSize) : list.length;
   return { items: list.slice(0, size), nextCursor: null as string | null };
 }
@@ -104,8 +167,7 @@ function recomputeCart(cart: CartDto): CartDto {
       reasons.push(`Voucher ${v.code} yêu cầu đơn tối thiểu ${v.minOrderAmount.toLocaleString("vi-VN")}đ.`);
     } else {
       const raw = v.discountType === "fixed"
-        ? v.discountValue
-        : Math.floor((subtotal * v.discountValue) / 100);
+        ? v.discountValue : Math.floor((subtotal * v.discountValue) / 100);
       discount = Math.min(raw, v.maxDiscount ?? raw);
     }
   }
@@ -131,68 +193,129 @@ function makeCartItem(p: ProductDto, qty: number, note?: string): CartItemDto {
   };
 }
 
-function ok<T>(data: T) { return data; }
-
-function notFound(msg = "Không tìm thấy tài nguyên."): never {
-  const err = new Error(msg) as Error & { __apiStatus: number; __apiCode: string };
-  err.__apiStatus = 404;
-  err.__apiCode = "NOT_FOUND";
-  throw err;
-}
-
-function conflict(code: string, msg: string): never {
-  const err = new Error(msg) as Error & { __apiStatus: number; __apiCode: string };
-  err.__apiStatus = 409;
-  err.__apiCode = code;
-  throw err;
-}
-
 function summarize(o: OrderDetailDto): OrderSummaryDto {
   return {
     id: o.id, displayCode: o.displayCode, shopId: o.shopId, shopName: o.shopName,
     shopLogoUrl: o.shopLogoUrl, status: o.status, itemSummary: o.itemSummary,
     itemCount: o.itemCount, total: o.total, placedAt: o.placedAt,
     canCancel: o.canCancel, canReview: o.canReview, canReorder: o.canReorder,
+    customerName: o.customerName, customerPhone: o.customerPhone,
   };
 }
 
-// ---- route handlers ----
+const ok = <T>(d: T) => d;
+
+// -------- route --------
 async function route(ctx: Ctx): Promise<unknown> {
   const { method, path, query, body } = ctx;
   const M = `${method} ${path}`;
 
-  // auth
-  if (M === "GET /auth/session") {
-    const s: SessionDto = { authenticated: state.authenticated, user: state.user };
-    return ok(s);
+  // ============ AUTH ============
+  if (M === "POST /auth/request-otp") {
+    const b = body as { phone: string };
+    const phone = normalizePhone(b?.phone ?? "");
+    if (!isValidVNPhone(phone)) badRequest("INVALID_PHONE", "Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0).");
+    const user = state.users.find((u) => u.phone === phone);
+    if (user?.status === "blocked") locked("Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.");
+    const challenge: OtpChallenge = {
+      id: `otp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      phone, otp: "123456", expiresAt: Date.now() + 120_000,
+    };
+    state.otpChallenges = [challenge, ...state.otpChallenges.filter((c) => c.expiresAt > Date.now())].slice(0, 20);
+    save();
+    return ok({
+      challengeId: challenge.id, expiresInSeconds: 120,
+      developmentOtp: "123456",
+      requiresRegistration: !user,
+    });
   }
+
+  if (M === "POST /auth/verify-otp") {
+    const b = body as { challengeId: string; phone: string; otp: string };
+    const phone = normalizePhone(b?.phone ?? "");
+    const c = state.otpChallenges.find((x) => x.id === b?.challengeId);
+    if (!c) badRequest("OTP_INVALID", "Phiên OTP không tồn tại hoặc đã hết hạn.");
+    if (c!.expiresAt < Date.now()) badRequest("OTP_EXPIRED", "OTP đã hết hạn, hãy gửi lại mã mới.");
+    if (c!.phone !== phone) badRequest("OTP_INVALID", "Số điện thoại không khớp.");
+    if (c!.otp !== String(b?.otp ?? "").trim()) badRequest("OTP_INVALID", "Mã OTP không đúng.");
+    const user = state.users.find((u) => u.phone === phone);
+    if (user?.status === "blocked") locked("Tài khoản đã bị khóa.");
+    state.otpChallenges = state.otpChallenges.filter((x) => x.id !== c!.id);
+    if (!user) {
+      save();
+      return ok({ status: "requires_registration", phone });
+    }
+    state.authenticated = true; state.currentUserId = user.id;
+    save();
+    return ok({ status: "authenticated", session: { authenticated: true, user } });
+  }
+
+  if (M === "POST /auth/register") {
+    const b = body as { fullName: string; phone: string; email?: string; acceptedTerms: boolean };
+    const phone = normalizePhone(b?.phone ?? "");
+    const fullName = String(b?.fullName ?? "").trim();
+    if (!fullName) badRequest("INVALID_NAME", "Vui lòng nhập họ tên.");
+    if (!isValidVNPhone(phone)) badRequest("INVALID_PHONE", "Số điện thoại không hợp lệ.");
+    if (!b?.acceptedTerms) badRequest("TERMS_REQUIRED", "Bạn cần đồng ý điều khoản sử dụng.");
+    if (state.users.some((u) => u.phone === phone)) conflict("PHONE_TAKEN", "Số điện thoại đã được đăng ký.");
+    const user: UserDto = {
+      id: `u-${Date.now()}`, fullName, phone,
+      email: b.email?.trim() || undefined,
+      role: "customer", status: "active", createdAt: new Date().toISOString(),
+    };
+    state.users = [user, ...state.users];
+    state.authenticated = true; state.currentUserId = user.id;
+    save();
+    return ok({ authenticated: true, user } satisfies SessionDto);
+  }
+
+  if (M === "GET /auth/session") {
+    const u = currentUser();
+    return ok<SessionDto>({ authenticated: !!u, user: u });
+  }
+
   if (M === "POST /auth/logout") {
-    state.authenticated = false; state.user = null; save();
+    state.authenticated = false; state.currentUserId = null; save();
     return ok(undefined);
   }
 
-  // users
+  // ============ USER SELF ============
   if (M === "GET /users/me") {
-    if (!state.user) notFound();
-    return ok(state.user);
+    const u = requireAuthenticated();
+    return ok(u);
   }
-  if (M === "GET /users/me/addresses") return ok({ items: state.addresses });
+  if (M === "PATCH /users/me") {
+    const u = requireActiveUser();
+    const b = body as Partial<Pick<UserDto, "fullName" | "email" | "avatarUrl" | "defaultDeliveryZoneId">>;
+    const idx = state.users.findIndex((x) => x.id === u.id);
+    state.users[idx] = { ...u, ...b };
+    save();
+    return ok(state.users[idx]);
+  }
+
+  if (M === "GET /users/me/addresses") {
+    requireAuthenticated();
+    return ok({ items: state.addresses });
+  }
   if (M === "GET /users/me/favorite-shops") {
-    const list = shops.filter((s) => state.favoriteShopIds.includes(s.id))
+    requireAuthenticated();
+    const list = state.shops
+      .filter((s) => state.favoriteShopIds.includes(s.id))
       .map((s) => decorateShop(s, query.deliveryZoneId));
     return ok({ items: list, nextCursor: null });
   }
   if (M === "GET /users/me/frequent-products") {
+    requireAuthenticated();
     const limit = Number(query.limit ?? 4);
     return ok({ items: products.slice(0, limit) });
   }
   const favMatch = path.match(/^\/users\/me\/favorite-shops\/(.+)$/);
   if (favMatch) {
+    requireAuthenticated();
     const shopId = favMatch[1];
     if (method === "PUT") {
       if (!state.favoriteShopIds.includes(shopId)) state.favoriteShopIds.push(shopId);
-      save();
-      return ok({ shopId, isFavorite: true });
+      save(); return ok({ shopId, isFavorite: true });
     }
     if (method === "DELETE") {
       state.favoriteShopIds = state.favoriteShopIds.filter((id) => id !== shopId);
@@ -200,22 +323,23 @@ async function route(ctx: Ctx): Promise<unknown> {
     }
   }
 
-  // catalog
-  if (M === "GET /categories") return ok({ items: categories });
-  if (M === "GET /delivery-zones") return ok({ items: zones });
+  // ============ CATALOG (public) ============
+  if (M === "GET /categories") return ok({ items: state.categories.filter((c) => c.active !== false) });
+  if (M === "GET /delivery-zones") return ok({ items: state.zones.filter((z) => z.active) });
   if (M === "GET /shops") {
-    let list = [...shops];
+    let list = state.shops.filter(
+      (s) => s.approvalStatus === "approved" && s.operationStatus !== "suspended",
+    );
     if (query.categoryId) list = list.filter((s) => s.categoryIds.includes(query.categoryId));
     if (query.deliveryZoneId) list = list.filter((s) => s.supportedZoneIds.includes(query.deliveryZoneId));
     if (query.sort === "distance") list.sort((a, b) => (a.distanceKm ?? 99) - (b.distanceKm ?? 99));
     if (query.sort === "newest") list = [...list].reverse();
     if (query.sort === "rating") list.sort((a, b) => b.rating - a.rating);
-    const paged = paginate(list.map((s) => decorateShop(s, query.deliveryZoneId)), query.pageSize);
-    return ok(paged);
+    return ok(paginate(list.map((s) => decorateShop(s, query.deliveryZoneId)), query.pageSize));
   }
   const shopMatch = path.match(/^\/shops\/([^/]+)$/);
   if (shopMatch && method === "GET") {
-    const s = shops.find((x) => x.id === shopMatch[1] || x.slug === shopMatch[1]);
+    const s = state.shops.find((x) => x.id === shopMatch[1] || x.slug === shopMatch[1]);
     if (!s) notFound("Không tìm thấy quán.");
     return ok(decorateShop(s!, query.deliveryZoneId));
   }
@@ -245,21 +369,24 @@ async function route(ctx: Ctx): Promise<unknown> {
     const q = (query.q ?? "").toLowerCase().trim();
     const kind = query.type ?? "all";
     const matchShops = q
-      ? shops.filter((s) => s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q))
+      ? state.shops.filter((s) => s.approvalStatus === "approved" &&
+          (s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)))
       : [];
     const matchProducts = q
       ? products.filter((p) => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q))
       : [];
     return ok({
-      shops: { items: kind === "products" ? [] : matchShops.map((s) => decorateShop(s, query.deliveryZoneId)),
-        total: kind === "products" ? 0 : matchShops.length },
-      products: { items: kind === "shops" ? [] : matchProducts, total: kind === "shops" ? 0 : matchProducts.length },
+      shops: { items: kind === "products" ? [] : matchShops.map((s) => decorateShop(s, query.deliveryZoneId)), total: matchShops.length },
+      products: { items: kind === "shops" ? [] : matchProducts, total: matchProducts.length },
       nextCursor: null,
     });
   }
 
-  // vouchers
-  if (M === "GET /users/me/vouchers") return ok(paginate(state.vouchers, query.pageSize));
+  // vouchers (user)
+  if (M === "GET /users/me/vouchers") {
+    requireAuthenticated();
+    return ok(paginate(state.vouchers.filter((v) => v.enabled !== false), query.pageSize));
+  }
 
   // cart
   if (M === "GET /cart") return ok(state.cart);
@@ -267,16 +394,15 @@ async function route(ctx: Ctx): Promise<unknown> {
     const b = body as { productId: string; quantity: number; note?: string; replaceExistingCart?: boolean };
     const p = products.find((x) => x.id === b.productId);
     if (!p) notFound("Không tìm thấy món.");
-    const shop = shops.find((s) => s.id === p!.shopId)!;
+    const shop = state.shops.find((s) => s.id === p!.shopId)!;
     if (state.cart.shop && state.cart.shop.id !== shop.id && !b.replaceExistingCart) {
       conflict("CART_SHOP_CONFLICT", "Giỏ hiện có món của quán khác.");
     }
     let cart = state.cart;
     if (!cart.shop || cart.shop.id !== shop.id || b.replaceExistingCart) {
       cart = { ...emptyCart(), shop: decorateShop(shop, state.browsingZoneId),
-        deliveryZone: zones.find((z) => z.id === state.browsingZoneId) ?? null };
+        deliveryZone: state.zones.find((z) => z.id === state.browsingZoneId) ?? null };
     }
-    // merge same-product item
     const existing = cart.items.find((it) => it.productId === p!.id && it.note === b.note);
     if (existing) {
       existing.quantity += b.quantity;
@@ -310,14 +436,14 @@ async function route(ctx: Ctx): Promise<unknown> {
   if (M === "DELETE /cart") { state.cart = emptyCart(); save(); return ok(state.cart); }
   if (M === "PUT /cart/delivery-zone") {
     const b = body as { deliveryZoneId: string };
-    const z = zones.find((x) => x.id === b.deliveryZoneId) ?? null;
+    const z = state.zones.find((x) => x.id === b.deliveryZoneId) ?? null;
     state.browsingZoneId = z?.id ?? state.browsingZoneId;
     state.cart = recomputeCart({ ...state.cart, deliveryZone: z });
     save(); return ok(state.cart);
   }
   if (M === "PUT /cart/voucher") {
     const b = body as { code: string };
-    const v = state.vouchers.find((x) => x.code.toUpperCase() === b.code.toUpperCase());
+    const v = state.vouchers.find((x) => x.code.toUpperCase() === b.code.toUpperCase() && x.enabled !== false);
     if (!v) conflict("VOUCHER_INVALID", "Mã voucher không hợp lệ.");
     state.cart = recomputeCart({ ...state.cart, voucher: v! });
     save(); return ok(state.cart);
@@ -328,15 +454,22 @@ async function route(ctx: Ctx): Promise<unknown> {
   }
   if (M === "POST /cart/validate") { state.cart = recomputeCart(state.cart); save(); return ok(state.cart); }
 
-  // orders
-  if (M === "GET /orders") return ok(paginate(state.orders.map(summarize), query.pageSize));
+  // ============ ORDERS (customer) ============
+  if (M === "GET /orders") {
+    const u = requireAuthenticated();
+    const mine = state.orders.filter((o) => o.customerId === u.id);
+    return ok(paginate(mine.map(summarize), query.pageSize));
+  }
   const orderMatch = path.match(/^\/orders\/([^/]+)$/);
   if (orderMatch && method === "GET") {
+    const u = requireAuthenticated();
     const o = state.orders.find((x) => x.id === orderMatch[1]);
     if (!o) notFound("Không tìm thấy đơn hàng.");
+    if (o!.customerId && o!.customerId !== u.id && u.role !== "admin") forbidden();
     return ok(o);
   }
   if (M === "POST /orders") {
+    const u = requireActiveUser();
     const cart = state.cart;
     if (!cart.shop || !cart.items.length) conflict("CART_EMPTY", "Giỏ hàng trống.");
     const b = body as { delivery?: OrderDetailDto["delivery"]; note?: string };
@@ -350,6 +483,7 @@ async function route(ctx: Ctx): Promise<unknown> {
       itemCount: cart.items.reduce((n, it) => n + it.quantity, 0),
       total: cart.pricing.total, placedAt: now,
       canCancel: true, canReview: false, canReorder: true,
+      customerId: u.id, customerName: u.fullName, customerPhone: u.phone,
       shopPhone: cart.shop!.phone, shopAddress: cart.shop!.address,
       items: cart.items.map((it) => ({
         productId: it.product.id, productName: it.product.name,
@@ -360,7 +494,7 @@ async function route(ctx: Ctx): Promise<unknown> {
       paymentMethod: "cash_on_delivery", paymentStatus: "unpaid",
       delivery: b.delivery ?? {
         zoneId: cart.deliveryZone?.id ?? "z1", zoneName: cart.deliveryZone?.name ?? "",
-        recipientName: state.user?.fullName ?? "Bạn HoLa", phone: state.user?.phone ?? "",
+        recipientName: u.fullName, phone: u.phone,
         addressLine: state.addresses.find((a) => a.isDefault)?.addressLine ?? "",
         note: b.note, etaMinutes: cart.shop!.estimatedDeliveryMinutes,
       },
@@ -369,20 +503,19 @@ async function route(ctx: Ctx): Promise<unknown> {
     state.orders = [order, ...state.orders];
     state.cart = emptyCart();
     state.notifications = [
-      {
-        id: `n-${id}`, type: "order", title: "Đã gửi đơn cho quán",
+      { id: `n-${id}`, type: "order", title: "Đã gửi đơn cho quán",
         body: `Đơn ${order.displayCode} đang chờ ${order.shopName} xác nhận.`,
-        createdAt: now, readAt: null, target: { type: "order", id },
-      },
+        createdAt: now, readAt: null, target: { type: "order", id }, userId: u.id },
       ...state.notifications,
     ];
-    save();
-    return ok(order);
+    save(); return ok(order);
   }
   const cancelMatch = path.match(/^\/orders\/([^/]+)\/cancel$/);
   if (cancelMatch && method === "POST") {
+    const u = requireAuthenticated();
     const o = state.orders.find((x) => x.id === cancelMatch[1]);
     if (!o) notFound();
+    if (o!.customerId && o!.customerId !== u.id) forbidden();
     if (!o!.canCancel) conflict("ORDER_NOT_CANCELABLE", "Đơn không thể hủy ở trạng thái này.");
     const b = (body ?? {}) as { reasonCode?: string; reasonText?: string };
     const now = new Date().toISOString();
@@ -393,15 +526,16 @@ async function route(ctx: Ctx): Promise<unknown> {
   }
   const reorderMatch = path.match(/^\/orders\/([^/]+)\/reorder$/);
   if (reorderMatch && method === "POST") {
+    requireAuthenticated();
     const o = state.orders.find((x) => x.id === reorderMatch[1]);
     if (!o) notFound();
     const b = (body ?? {}) as { replaceExistingCart?: boolean };
-    const shop = shops.find((s) => s.id === o!.shopId)!;
+    const shop = state.shops.find((s) => s.id === o!.shopId)!;
     if (state.cart.shop && state.cart.shop.id !== shop.id && !b.replaceExistingCart) {
       conflict("CART_SHOP_CONFLICT", "Giỏ hiện có món của quán khác.");
     }
-    let cart: CartDto = { ...emptyCart(), shop: decorateShop(shop, state.browsingZoneId),
-      deliveryZone: zones.find((z) => z.id === state.browsingZoneId) ?? null };
+    const cart: CartDto = { ...emptyCart(), shop: decorateShop(shop, state.browsingZoneId),
+      deliveryZone: state.zones.find((z) => z.id === state.browsingZoneId) ?? null };
     const skipped: Array<{ productId: string; reason: string }> = [];
     for (const it of o!.items) {
       const p = products.find((x) => x.id === it.productId);
@@ -413,12 +547,13 @@ async function route(ctx: Ctx): Promise<unknown> {
   }
   const reviewMatch = path.match(/^\/orders\/([^/]+)\/review$/);
   if (reviewMatch && method === "POST") {
+    const u = requireAuthenticated();
     const o = state.orders.find((x) => x.id === reviewMatch[1]);
     if (!o) notFound();
     const b = body as { rating: number; comment?: string };
     const review: ReviewDto = {
       id: `r-${Date.now()}`, orderId: o!.id, shopId: o!.shopId,
-      user: { id: state.user?.id ?? "u1", displayName: state.user?.fullName ?? "Khách" },
+      user: { id: u.id, displayName: u.fullName },
       rating: b.rating, comment: b.comment, createdAt: new Date().toISOString(),
     };
     o!.review = review; o!.canReview = false;
@@ -426,26 +561,258 @@ async function route(ctx: Ctx): Promise<unknown> {
     save(); return ok(review);
   }
 
-  // notifications
+  // notifications (user)
   if (M === "GET /notifications") {
-    const unread = state.notifications.filter((n) => !n.readAt).length;
-    return ok({ items: state.notifications, nextCursor: null, unreadCount: unread });
+    const u = requireAuthenticated();
+    const list = state.notifications.filter((n) => !n.userId || n.userId === u.id);
+    const unread = list.filter((n) => !n.readAt).length;
+    return ok({ items: list, nextCursor: null, unreadCount: unread });
   }
   if (M === "GET /notifications/unread-count") {
-    return ok({ unreadCount: state.notifications.filter((n) => !n.readAt).length });
+    const u = currentUser();
+    if (!u) return ok({ unreadCount: 0 });
+    const list = state.notifications.filter((n) => !n.userId || n.userId === u.id);
+    return ok({ unreadCount: list.filter((n) => !n.readAt).length });
   }
   const notifReadMatch = path.match(/^\/notifications\/([^/]+)\/read$/);
   if (notifReadMatch && method === "PATCH") {
+    requireAuthenticated();
     const n = state.notifications.find((x) => x.id === notifReadMatch[1]);
     if (!n) notFound();
     n!.readAt = new Date().toISOString(); save();
     return ok(n!);
   }
   if (M === "POST /notifications/read-all") {
+    const u = requireAuthenticated();
     let count = 0;
-    for (const n of state.notifications) if (!n.readAt) { n.readAt = new Date().toISOString(); count++; }
+    for (const n of state.notifications) {
+      if ((!n.userId || n.userId === u.id) && !n.readAt) { n.readAt = new Date().toISOString(); count++; }
+    }
     save();
     return ok({ updatedCount: count, unreadCount: 0 });
+  }
+
+  // ============ ADMIN ============
+  if (path.startsWith("/admin/") || path === "/admin") {
+    const admin = requireAdmin();
+
+    if (M === "GET /admin/stats") {
+      const now = Date.now();
+      const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+      const todayOrders = state.orders.filter((o) => new Date(o.placedAt).getTime() >= startOfToday.getTime());
+      const stats: AdminStatsDto = {
+        totalCustomers: state.users.filter((u) => u.role === "customer").length,
+        activeShops: state.shops.filter((s) => s.approvalStatus === "approved" && s.operationStatus === "active").length,
+        pendingShops: state.shops.filter((s) => s.approvalStatus === "pending").length,
+        ordersToday: todayOrders.length,
+        revenueToday: todayOrders.filter((o) => o.status !== "da_huy").reduce((n, o) => n + o.total, 0),
+        cancelledToday: todayOrders.filter((o) => o.status === "da_huy").length,
+        ordersByStatus: (["cho_quan_xac_nhan", "quan_da_xac_nhan", "dang_chuan_bi", "dang_giao", "hoan_thanh", "da_huy"] as OrderStatus[])
+          .map((s) => ({ status: s, count: state.orders.filter((o) => o.status === s).length })),
+        trend7d: Array.from({ length: 7 }).map((_, i) => {
+          const d = new Date(now - (6 - i) * 86400e3);
+          const dayStart = new Date(d); dayStart.setHours(0, 0, 0, 0);
+          const dayEnd = dayStart.getTime() + 86400e3;
+          const dayOrders = state.orders.filter((o) => {
+            const t = new Date(o.placedAt).getTime();
+            return t >= dayStart.getTime() && t < dayEnd && o.status !== "da_huy";
+          });
+          return {
+            date: `${dayStart.getDate()}/${dayStart.getMonth() + 1}`,
+            orders: dayOrders.length,
+            revenue: dayOrders.reduce((n, o) => n + o.total, 0),
+          };
+        }),
+        latestOrders: [...state.orders]
+          .sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime())
+          .slice(0, 8).map(summarize),
+        pendingApprovalShops: state.shops.filter((s) => s.approvalStatus === "pending"),
+      };
+      return ok(stats);
+    }
+
+    if (M === "GET /admin/audits") return ok({ items: state.audits });
+
+    // shops
+    if (M === "GET /admin/shops") {
+      let list = [...state.shops];
+      const q = (query.q ?? "").toLowerCase();
+      if (q) list = list.filter((s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.ownerName ?? "").toLowerCase().includes(q) ||
+        (s.ownerPhone ?? "").includes(q));
+      if (query.approvalStatus) list = list.filter((s) => s.approvalStatus === query.approvalStatus);
+      if (query.operationStatus) list = list.filter((s) => s.operationStatus === query.operationStatus);
+      if (query.deliveryZoneId) list = list.filter((s) => s.supportedZoneIds.includes(query.deliveryZoneId));
+      if (query.sort === "rating") list.sort((a, b) => b.rating - a.rating);
+      else if (query.sort === "orderCount") list.sort((a, b) => (b.orderCount ?? 0) - (a.orderCount ?? 0));
+      else list.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+      return ok({ items: list, nextCursor: null });
+    }
+    const adminShopMatch = path.match(/^\/admin\/shops\/([^/]+)$/);
+    if (adminShopMatch) {
+      const shop = state.shops.find((s) => s.id === adminShopMatch[1]);
+      if (!shop) notFound("Không tìm thấy quán.");
+      if (method === "GET") return ok(shop);
+      if (method === "PATCH") {
+        Object.assign(shop!, body as Partial<ShopDto>);
+        audit("shop.update", "shop", shop!.id);
+        save(); return ok(shop);
+      }
+    }
+    const adminShopAction = path.match(/^\/admin\/shops\/([^/]+)\/(approve|reject|suspend|activate)$/);
+    if (adminShopAction && method === "POST") {
+      const shop = state.shops.find((s) => s.id === adminShopAction[1]);
+      if (!shop) notFound();
+      const action = adminShopAction[2];
+      const b = (body ?? {}) as { reason?: string };
+      if (action === "approve") { shop!.approvalStatus = "approved"; }
+      if (action === "reject") { shop!.approvalStatus = "rejected"; }
+      if (action === "suspend") { shop!.operationStatus = "suspended"; }
+      if (action === "activate") { shop!.operationStatus = "active"; }
+      audit(`shop.${action}`, "shop", shop!.id, b.reason);
+      save(); return ok(shop);
+    }
+
+    // orders
+    if (M === "GET /admin/orders") {
+      let list = [...state.orders];
+      const q = (query.q ?? "").toLowerCase();
+      if (q) list = list.filter((o) =>
+        o.displayCode.toLowerCase().includes(q) ||
+        (o.customerPhone ?? "").includes(q) ||
+        o.shopName.toLowerCase().includes(q));
+      if (query.status) list = list.filter((o) => o.status === query.status);
+      if (query.shopId) list = list.filter((o) => o.shopId === query.shopId);
+      list.sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime());
+      if (query.sort === "total") list.sort((a, b) => b.total - a.total);
+      return ok({ items: list.map(summarize), nextCursor: null });
+    }
+    const adminOrderMatch = path.match(/^\/admin\/orders\/([^/]+)$/);
+    if (adminOrderMatch && method === "GET") {
+      const o = state.orders.find((x) => x.id === adminOrderMatch[1]);
+      if (!o) notFound(); return ok(o);
+    }
+    const adminOrderCancel = path.match(/^\/admin\/orders\/([^/]+)\/cancel$/);
+    if (adminOrderCancel && method === "POST") {
+      const o = state.orders.find((x) => x.id === adminOrderCancel[1]);
+      if (!o) notFound();
+      const b = (body ?? {}) as { reason?: string };
+      if (!b.reason) badRequest("REASON_REQUIRED", "Vui lòng nhập lý do hủy đơn.");
+      const now = new Date().toISOString();
+      o!.status = "da_huy"; o!.canCancel = false; o!.canReview = false;
+      o!.cancellation = { reason: b.reason, canceledAt: now, canceledBy: `admin:${admin.fullName}` };
+      o!.statusHistory = [...o!.statusHistory, { status: "da_huy", occurredAt: now, note: b.reason }];
+      if (o!.customerId) {
+        state.notifications = [
+          { id: `n-adm-${o!.id}`, type: "order", title: "Đơn hàng bị hủy bởi quản trị viên",
+            body: `Đơn ${o!.displayCode} đã bị hủy. Lý do: ${b.reason}`,
+            createdAt: now, readAt: null, target: { type: "order", id: o!.id }, userId: o!.customerId },
+          ...state.notifications,
+        ];
+      }
+      audit("order.cancel", "order", o!.id, b.reason);
+      save(); return ok(o);
+    }
+
+    // users
+    if (M === "GET /admin/users") {
+      let list = state.users.map((u): AdminUserSummaryDto => {
+        const orders = state.orders.filter((o) => o.customerId === u.id);
+        return {
+          ...u,
+          orderCount: orders.length,
+          totalSpending: orders.filter((o) => o.status !== "da_huy").reduce((n, o) => n + o.total, 0),
+        };
+      });
+      const q = (query.q ?? "").toLowerCase();
+      if (q) list = list.filter((u) =>
+        u.fullName.toLowerCase().includes(q) || u.phone.includes(q) || (u.email ?? "").toLowerCase().includes(q));
+      if (query.role) list = list.filter((u) => u.role === query.role);
+      if (query.status) list = list.filter((u) => u.status === query.status);
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return ok({ items: list, nextCursor: null });
+    }
+    const adminUserAction = path.match(/^\/admin\/users\/([^/]+)\/(block|unblock)$/);
+    if (adminUserAction && method === "POST") {
+      const user = state.users.find((u) => u.id === adminUserAction[1]);
+      if (!user) notFound();
+      const action = adminUserAction[2];
+      const b = (body ?? {}) as { reason?: string };
+      if (action === "block") {
+        if (user!.id === admin.id) badRequest("CANNOT_BLOCK_SELF", "Không thể tự khóa tài khoản của bạn.");
+        if (!b.reason) badRequest("REASON_REQUIRED", "Vui lòng nhập lý do khóa.");
+        user!.status = "blocked";
+        if (state.currentUserId === user!.id) { state.authenticated = false; state.currentUserId = null; }
+      } else user!.status = "active";
+      audit(`user.${action}`, "user", user!.id, b.reason);
+      save(); return ok(user);
+    }
+
+    // vouchers
+    if (M === "GET /admin/vouchers") return ok({ items: state.vouchers });
+    if (M === "POST /admin/vouchers") {
+      const b = body as VoucherDto;
+      const v: VoucherDto = {
+        ...b, id: `v-${Date.now()}`, code: b.code.toUpperCase(),
+        status: "usable", enabled: true, usedCount: 0,
+      };
+      state.vouchers = [v, ...state.vouchers];
+      audit("voucher.create", "voucher", v.id);
+      save(); return ok(v);
+    }
+    const adminVoucherMatch = path.match(/^\/admin\/vouchers\/([^/]+)$/);
+    if (adminVoucherMatch && method === "PATCH") {
+      const v = state.vouchers.find((x) => x.id === adminVoucherMatch[1]);
+      if (!v) notFound();
+      Object.assign(v!, body as Partial<VoucherDto>);
+      if (v!.code) v!.code = v!.code.toUpperCase();
+      audit("voucher.update", "voucher", v!.id);
+      save(); return ok(v);
+    }
+    const adminVoucherAction = path.match(/^\/admin\/vouchers\/([^/]+)\/(enable|disable)$/);
+    if (adminVoucherAction && method === "POST") {
+      const v = state.vouchers.find((x) => x.id === adminVoucherAction[1]);
+      if (!v) notFound();
+      v!.enabled = adminVoucherAction[2] === "enable";
+      v!.status = v!.enabled ? "usable" : "disabled";
+      audit(`voucher.${adminVoucherAction[2]}`, "voucher", v!.id);
+      save(); return ok(v);
+    }
+
+    // categories
+    if (M === "GET /admin/categories") return ok({ items: state.categories });
+    if (M === "POST /admin/categories") {
+      const b = body as CategoryDto;
+      const c: CategoryDto = { ...b, id: `c-${Date.now()}`, active: true };
+      state.categories = [...state.categories, c];
+      save(); return ok(c);
+    }
+    const adminCatMatch = path.match(/^\/admin\/categories\/([^/]+)$/);
+    if (adminCatMatch && method === "PATCH") {
+      const c = state.categories.find((x) => x.id === adminCatMatch[1]);
+      if (!c) notFound();
+      Object.assign(c!, body as Partial<CategoryDto>);
+      save(); return ok(c);
+    }
+
+    // delivery zones
+    if (M === "GET /admin/delivery-zones") return ok({ items: state.zones });
+    if (M === "POST /admin/delivery-zones") {
+      const b = body as DeliveryZoneDto;
+      if ((b.baseDeliveryFee ?? 0) < 0) badRequest("INVALID_FEE", "Phí giao không được âm.");
+      const z: DeliveryZoneDto = { ...b, id: `z-${Date.now()}`, active: true };
+      state.zones = [...state.zones, z]; save(); return ok(z);
+    }
+    const adminZoneMatch = path.match(/^\/admin\/delivery-zones\/([^/]+)$/);
+    if (adminZoneMatch && method === "PATCH") {
+      const z = state.zones.find((x) => x.id === adminZoneMatch[1]);
+      if (!z) notFound();
+      const b = body as Partial<DeliveryZoneDto>;
+      if (typeof b.baseDeliveryFee === "number" && b.baseDeliveryFee < 0) badRequest("INVALID_FEE", "Phí giao không được âm.");
+      Object.assign(z!, b);
+      save(); return ok(z);
+    }
   }
 
   notFound(`Mock API chưa hỗ trợ ${M}`);
@@ -462,14 +829,12 @@ export async function handleMock<T>(
   return (await route({ method: method.toUpperCase(), path, query: cleanQuery, body })) as T;
 }
 
-// used by services/hooks to check availability
 export function isMockEnabled(): boolean {
   const v = import.meta.env.VITE_USE_MOCK_API;
   if (v === "false" || v === "0") return false;
-  return true; // default on until real backend is ready
+  return true;
 }
 
-// dev helper: reset state
 export function _resetMockState() {
   state = initialState(); save();
 }

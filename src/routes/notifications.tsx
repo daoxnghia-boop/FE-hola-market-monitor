@@ -1,3 +1,4 @@
+import { useRequireAuth } from "@/lib/require-auth";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Bell, CheckCheck, Receipt, Store, Ticket, Megaphone } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +42,7 @@ const ICON_BG: Record<NotificationType, string> = {
 };
 
 function NotificationsPage() {
+  useRequireAuth();
   const list = useNotifications();
   const state = useNotificationsState();
   const unread = useUnreadCount();

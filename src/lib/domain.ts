@@ -26,6 +26,7 @@ export const VOUCHER_STATUS_LABEL: Record<VoucherStatus, string> = {
   expired: "Hết hạn",
   locked: "Chưa mở khóa",
   not_eligible: "Chưa đủ điều kiện",
+  disabled: "Tạm ngưng",
 };
 
 export const formatVND = (value: number) => `${value.toLocaleString("vi-VN")}đ`;

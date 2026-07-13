@@ -1,3 +1,4 @@
+import { useRequireAuth } from "@/lib/require-auth";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/orders/$orderId")({
 });
 
 function OrderDetailPage() {
+  useRequireAuth();
   const { orderId } = Route.useParams();
   const { data: order, isLoading, isError } = useOrder(orderId);
   const cancelOrder = useCancelOrder();

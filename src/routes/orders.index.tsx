@@ -1,3 +1,4 @@
+import { useRequireAuth } from "@/lib/require-auth";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { RotateCcw } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/orders/")({
 });
 
 function OrdersListPage() {
+  useRequireAuth();
   const { data: orders = [], isLoading, isError } = useOrders();
   const reorder = useReorder();
   const navigate = useNavigate();
