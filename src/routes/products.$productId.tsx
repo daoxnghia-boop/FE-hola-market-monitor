@@ -171,13 +171,16 @@ function ProductNotFoundComponent() {
 
 function ProductDetailPage() {
   const { productId } = Route.useParams();
+  const { product: loaderProduct } = Route.useLoaderData();
   const router = useRouter();
   const zone = useDeliveryZone();
   const zoneId = zone?.id;
   const productQuery = useProduct(productId, zoneId);
-  const product = productQuery.data;
+  // Fall back to loader-primed product (no-zone variant) so SSR + hydration
+  // paint the full page without a skeleton flash.
+  const product = productQuery.data ?? loaderProduct;
 
-  if (productQuery.isLoading || !product) {
+  if (!product) {
     return (
       <AppShell>
         <ProductDetailSkeleton />
