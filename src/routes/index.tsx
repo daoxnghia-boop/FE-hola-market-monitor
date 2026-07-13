@@ -192,12 +192,15 @@ function HomePage() {
       <section className="mt-8 px-4 pb-32 md:pb-12">
         <SectionHeader title="Quán mới nổi" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {newShopsQuery.isLoading && (
+          {newShopsQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Đang tải quán mới...</p>
+          ) : newShops.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Chưa có quán mới.</p>
+          ) : (
+            newShops.map((s) => (
+              <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
+            ))
           )}
-          {newShops.map((s) => (
-            <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
-          ))}
         </div>
       </section>
 
