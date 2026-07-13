@@ -27,7 +27,9 @@ export function ZonePicker({ trigger }: { trigger: ReactNode }) {
       <SheetContent side="bottom" className="rounded-t-3xl">
         <SheetHeader className="text-left">
           <SheetTitle>Chọn khu giao hàng</SheetTitle>
-          <SheetDescription>Phí ship tự động cập nhật theo khu bạn chọn.</SheetDescription>
+          <SheetDescription>
+            Phí ship có thể chênh lệch tùy quán — mức bên dưới là giá chuẩn của khu.
+          </SheetDescription>
         </SheetHeader>
         <ul className="mt-3 space-y-1.5 pb-4">
           {isLoading && (
@@ -70,7 +72,7 @@ export function ZonePicker({ trigger }: { trigger: ReactNode }) {
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold">{z.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      Phí ship từ: {formatVND(z.baseDeliveryFee)}
+                      Phí ship chuẩn khu: {formatVND(z.baseDeliveryFee)}
                     </div>
                   </div>
                   {active && <Check className="size-5 text-primary" />}
