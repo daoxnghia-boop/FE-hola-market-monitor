@@ -15,6 +15,7 @@ export const Route = createFileRoute("/orders/")({
 });
 
 function OrdersListPage() {
+  useRequireAuth();
   const { data: orders = [], isLoading, isError } = useOrders();
   const reorder = useReorder();
   const navigate = useNavigate();

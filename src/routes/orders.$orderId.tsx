@@ -31,6 +31,7 @@ export const Route = createFileRoute("/orders/$orderId")({
 });
 
 function OrderDetailPage() {
+  useRequireAuth();
   const { orderId } = Route.useParams();
   const { data: order, isLoading, isError } = useOrder(orderId);
   const cancelOrder = useCancelOrder();

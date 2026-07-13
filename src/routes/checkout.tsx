@@ -26,6 +26,7 @@ export const Route = createFileRoute("/checkout")({
 });
 
 function CheckoutPage() {
+  useRequireAuth();
   const cart = useCart();
   const items = useCartItems();
   const pricing = useCartPricing();

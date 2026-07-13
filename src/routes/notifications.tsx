@@ -42,6 +42,7 @@ const ICON_BG: Record<NotificationType, string> = {
 };
 
 function NotificationsPage() {
+  useRequireAuth();
   const list = useNotifications();
   const state = useNotificationsState();
   const unread = useUnreadCount();
