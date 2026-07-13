@@ -96,10 +96,10 @@ function AdminVouchers() {
             onSubmit={async (data) => {
               try {
                 await create.mutateAsync({ ...data, status: "usable" });
-                toast.success("Đã tạo voucher.");
+                toast.success("Đã tạo voucher", { description: data.code });
                 setOpen(false);
               } catch (e) {
-                toast.error(apiErrorMessage(e));
+                toast.error("Tạo voucher thất bại", { description: apiErrorMessage(e) });
               }
             }}
             pending={create.isPending}
