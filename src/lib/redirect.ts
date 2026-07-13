@@ -15,7 +15,11 @@ const KEY = "hola-post-login-redirect";
 
 export function storeRedirectIntent(path: string) {
   if (typeof window === "undefined") return;
-  try { window.sessionStorage.setItem(KEY, safeInternalPath(path)); } catch { /* ignore */ }
+  try {
+    window.sessionStorage.setItem(KEY, safeInternalPath(path));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function consumeRedirectIntent(): string | null {
@@ -24,5 +28,7 @@ export function consumeRedirectIntent(): string | null {
     const v = window.sessionStorage.getItem(KEY);
     if (v) window.sessionStorage.removeItem(KEY);
     return v ? safeInternalPath(v) : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }

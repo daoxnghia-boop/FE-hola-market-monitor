@@ -62,7 +62,12 @@ export async function apiRequest<T>(
   const { isMockEnabled, handleMock } = await import("./mock");
   if (isMockEnabled()) {
     try {
-      return await handleMock<T>(method, path.startsWith("/") ? path : `/${path}`, query ?? {}, body);
+      return await handleMock<T>(
+        method,
+        path.startsWith("/") ? path : `/${path}`,
+        query ?? {},
+        body,
+      );
     } catch (err) {
       const e = err as Error & { __apiStatus?: number; __apiCode?: string };
       if (e.__apiStatus) {

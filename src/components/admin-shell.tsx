@@ -1,15 +1,28 @@
 import { Link, useNavigate, useRouterState, Outlet } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  LayoutDashboard, Store, ShoppingBag, Users, Ticket, Tag, MapPin,
-  Menu, LogOut, ArrowLeft, X,
+  LayoutDashboard,
+  Store,
+  ShoppingBag,
+  Users,
+  Ticket,
+  Tag,
+  MapPin,
+  Menu,
+  LogOut,
+  ArrowLeft,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useLogout, useSession } from "@/lib/api/hooks";
@@ -95,7 +108,9 @@ export function AdminShell() {
             <h1 className="text-base font-bold sm:text-lg">{current?.label ?? "Trang quản trị"}</h1>
             <div className="ml-auto flex items-center gap-2">
               <Button asChild variant="ghost" size="sm">
-                <Link to="/"><ArrowLeft className="size-4" /> Về app</Link>
+                <Link to="/">
+                  <ArrowLeft className="size-4" /> Về app
+                </Link>
               </Button>
               <AdminUserMenu />
             </div>
@@ -115,7 +130,9 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <div className="hidden h-14 items-center gap-2 border-b border-border px-4 lg:flex">
-        <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">🍜</span>
+        <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
+          🍜
+        </span>
         <span className="font-bold">HoLa Admin</span>
       </div>
       <nav className="flex-1 space-y-0.5 p-2">
@@ -124,10 +141,14 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           const Icon = n.icon;
           return (
             <Link
-              key={n.to} to={n.to as never} onClick={onNavigate}
+              key={n.to}
+              to={n.to as never}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition",
-                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
               <Icon className="size-4" />
@@ -145,12 +166,20 @@ function AdminUserMenu() {
   const logout = useLogout();
   const navigate = useNavigate();
   const user = session.data?.user;
-  const initials = user?.fullName?.split(" ").map((s) => s[0]).slice(-2).join("").toUpperCase() || "AD";
+  const initials =
+    user?.fullName
+      ?.split(" ")
+      .map((s) => s[0])
+      .slice(-2)
+      .join("")
+      .toUpperCase() || "AD";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-2">
-          <Avatar className="size-7"><AvatarFallback>{initials}</AvatarFallback></Avatar>
+          <Avatar className="size-7">
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
           <span className="hidden sm:inline">{user?.fullName}</span>
         </Button>
       </DropdownMenuTrigger>

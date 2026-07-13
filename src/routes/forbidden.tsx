@@ -16,12 +16,16 @@ function ForbiddenPage() {
         </div>
         <h1 className="mt-4 text-xl font-bold">Bạn không có quyền truy cập</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Trang này chỉ dành cho tài khoản quản trị viên. Nếu bạn cho rằng đây là nhầm lẫn, vui
-          lòng liên hệ đội hỗ trợ.
+          Trang này chỉ dành cho tài khoản quản trị viên. Nếu bạn cho rằng đây là nhầm lẫn, vui lòng
+          liên hệ đội hỗ trợ.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <Button asChild size="lg"><Link to="/">Về trang chủ</Link></Button>
-          <Button asChild variant="outline" size="lg"><Link to="/login">Đăng nhập lại</Link></Button>
+          <Button asChild size="lg">
+            <Link to="/">Về trang chủ</Link>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link to="/login">Đăng nhập lại</Link>
+          </Button>
         </div>
       </div>
     </div>

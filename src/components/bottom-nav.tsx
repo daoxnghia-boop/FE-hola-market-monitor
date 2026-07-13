@@ -14,7 +14,13 @@ type NavItem = {
 const items: NavItem[] = [
   { to: "/", label: "Trang chủ", icon: Home, match: (p) => p === "/" },
   { to: "/search", label: "Tìm kiếm", icon: Search, match: (p) => p.startsWith("/search") },
-  { to: "/cart", label: "Giỏ hàng", icon: ShoppingBag, match: (p) => p.startsWith("/cart"), badge: true },
+  {
+    to: "/cart",
+    label: "Giỏ hàng",
+    icon: ShoppingBag,
+    match: (p) => p.startsWith("/cart"),
+    badge: true,
+  },
   { to: "/orders", label: "Đơn hàng", icon: Receipt, match: (p) => p.startsWith("/orders") },
   { to: "/account", label: "Tài khoản", icon: User, match: (p) => p.startsWith("/account") },
 ];

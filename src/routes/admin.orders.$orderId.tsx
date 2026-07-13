@@ -21,13 +21,18 @@ function AdminOrderDetail() {
 
   return (
     <div className="space-y-4">
-      <Link to="/admin/orders" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/admin/orders"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="size-4" /> Danh sách đơn
       </Link>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-extrabold">{o.displayCode}</h1>
         <OrderStatusBadge status={o.status} />
-        <span className="text-xs text-muted-foreground">{new Date(o.placedAt).toLocaleString("vi-VN")}</span>
+        <span className="text-xs text-muted-foreground">
+          {new Date(o.placedAt).toLocaleString("vi-VN")}
+        </span>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -36,7 +41,9 @@ function AdminOrderDetail() {
           <ul className="space-y-2 text-sm">
             {o.items.map((it) => (
               <li key={it.productId} className="flex justify-between">
-                <span>{it.quantity}× {it.productName}</span>
+                <span>
+                  {it.quantity}× {it.productName}
+                </span>
                 <span className="font-semibold">{formatVND(it.lineTotal)}</span>
               </li>
             ))}
@@ -55,7 +62,9 @@ function AdminOrderDetail() {
           <div className="text-xs text-muted-foreground">{o.customerPhone ?? ""}</div>
           <h2 className="mt-4 mb-2 text-sm font-bold">Quán</h2>
           <div className="text-sm">{o.shopName}</div>
-          <div className="text-xs text-muted-foreground">{o.shopPhone} · {o.shopAddress}</div>
+          <div className="text-xs text-muted-foreground">
+            {o.shopPhone} · {o.shopAddress}
+          </div>
           <h2 className="mt-4 mb-2 text-sm font-bold">Giao đến</h2>
           <div className="text-sm">{o.delivery.zoneName}</div>
           <div className="text-xs text-muted-foreground">{o.delivery.addressLine}</div>

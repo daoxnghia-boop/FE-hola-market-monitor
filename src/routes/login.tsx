@@ -100,13 +100,18 @@ function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/20 px-4 py-8">
       <div className="mx-auto max-w-md">
-        <Link to="/" className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/"
+          className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="size-4" /> Về trang chủ
         </Link>
 
         <div className="rounded-3xl bg-card p-6 shadow-card sm:p-8">
           <div className="mb-6 flex items-center gap-3">
-            <span className="grid size-12 place-items-center rounded-2xl bg-primary text-2xl text-primary-foreground">🍜</span>
+            <span className="grid size-12 place-items-center rounded-2xl bg-primary text-2xl text-primary-foreground">
+              🍜
+            </span>
             <div>
               <div className="text-lg font-extrabold">HoLa Market</div>
               <div className="text-xs text-muted-foreground">Đặt món local quanh Hòa Lạc</div>
@@ -116,16 +121,22 @@ function LoginPage() {
           {step === "phone" ? (
             <form onSubmit={submitPhone} className="space-y-4">
               <h1 className="text-xl font-bold">Đăng nhập</h1>
-              <p className="text-sm text-muted-foreground">Nhập số điện thoại để nhận mã xác thực.</p>
+              <p className="text-sm text-muted-foreground">
+                Nhập số điện thoại để nhận mã xác thực.
+              </p>
               <div className="space-y-1.5">
                 <Label htmlFor="phone">Số điện thoại</Label>
                 <Input
-                  id="phone" inputMode="tel" placeholder="0912xxxxxx"
+                  id="phone"
+                  inputMode="tel"
+                  placeholder="0912xxxxxx"
                   autoFocus
                   {...phoneForm.register("phone")}
                 />
                 {phoneForm.formState.errors.phone && (
-                  <p className="text-xs text-destructive">{phoneForm.formState.errors.phone.message}</p>
+                  <p className="text-xs text-destructive">
+                    {phoneForm.formState.errors.phone.message}
+                  </p>
                 )}
               </div>
               <Button type="submit" size="lg" className="w-full" disabled={requestOtp.isPending}>
@@ -143,8 +154,7 @@ function LoginPage() {
             <div className="space-y-4">
               <h1 className="text-xl font-bold">Nhập mã xác thực</h1>
               <p className="text-sm text-muted-foreground">
-                Mã 6 số đã gửi tới{" "}
-                <span className="font-semibold text-foreground">{phone}</span>{" "}
+                Mã 6 số đã gửi tới <span className="font-semibold text-foreground">{phone}</span>{" "}
                 <button
                   className="text-primary hover:underline"
                   onClick={() => setStep("phone")}
@@ -168,7 +178,9 @@ function LoginPage() {
                 </InputOTP>
               </div>
               <Button
-                onClick={submitOtp} size="lg" className="w-full"
+                onClick={submitOtp}
+                size="lg"
+                className="w-full"
                 disabled={verifyOtp.isPending || otpValue.length !== 6}
               >
                 {verifyOtp.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
@@ -179,7 +191,8 @@ function LoginPage() {
                   <span className="text-muted-foreground">Gửi lại sau {countdown}s</span>
                 ) : (
                   <button
-                    type="button" className="font-semibold text-primary hover:underline"
+                    type="button"
+                    className="font-semibold text-primary hover:underline"
                     onClick={() => requestChallenge(phone)}
                     disabled={requestOtp.isPending}
                   >
@@ -195,11 +208,19 @@ function LoginPage() {
           <div className="mt-4 rounded-2xl border border-dashed border-border bg-card/60 p-4 text-xs text-muted-foreground">
             <div className="mb-2 font-semibold text-foreground">Tài khoản mock để test</div>
             <ul className="space-y-1">
-              <li>👤 Khách: <span className="font-mono">0900000000</span></li>
-              <li>🛡️ Admin: <span className="font-mono">0909999999</span></li>
-              <li>🔒 Bị khóa: <span className="font-mono">0901111111</span></li>
+              <li>
+                👤 Khách: <span className="font-mono">0900000000</span>
+              </li>
+              <li>
+                🛡️ Admin: <span className="font-mono">0909999999</span>
+              </li>
+              <li>
+                🔒 Bị khóa: <span className="font-mono">0901111111</span>
+              </li>
             </ul>
-            <div className="mt-2">Mã OTP dev: <span className="font-mono">123456</span></div>
+            <div className="mt-2">
+              Mã OTP dev: <span className="font-mono">123456</span>
+            </div>
           </div>
         )}
       </div>
