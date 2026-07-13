@@ -259,13 +259,9 @@ function ShopDetailPage() {
           <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card md:col-span-2">
             Đang tải thực đơn...
           </p>
-        ) : productsQuery.isError ? (
-          <p className="rounded-2xl bg-card p-6 text-center text-sm text-destructive shadow-card md:col-span-2">
-            Chưa thể tải thực đơn.
-          </p>
         ) : filtered.length === 0 ? (
           <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card md:col-span-2">
-            Chưa có món trong nhóm này.
+            Hiện chưa có món trong nhóm này.
           </p>
         ) : (
           filtered.map((p) => (
