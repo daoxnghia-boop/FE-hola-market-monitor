@@ -178,24 +178,73 @@ export function useProductsFromSameShop(productId: string, zoneId?: string, limi
     retry: false,
   });
 }
+export function useProductReviewEligibility(productId: string) {
+  return useQuery({
+    queryKey: queryKeys.productReviewEligibility(productId),
+    queryFn: () => catalogApi.productReviewEligibility(productId),
+    enabled: Boolean(productId),
+    retry: false,
+  });
+}
+function invalidateProductReviewSurface(
+  client: ReturnType<typeof useQueryClient>,
+  productId: string,
+  orderId?: string,
+) {
+  client.invalidateQueries({ queryKey: ["product", productId] });
+  client.invalidateQueries({ queryKey: ["product-reviews", productId] });
+  client.invalidateQueries({ queryKey: ["product-review-summary", productId] });
+  client.invalidateQueries({
+    queryKey: ["product-review-eligibility", productId],
+  });
+  if (orderId) {
+    client.invalidateQueries({ queryKey: queryKeys.order(orderId) });
+    client.invalidateQueries({ queryKey: ["orders"] });
+  }
+}
 export function useCreateProductReview() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (v: {
       orderId: string;
       productId: string;
+      orderItemId?: string;
       rating: number;
       comment?: string;
       imageUrls?: string[];
     }) =>
       reviewApi.createProductReview(v.orderId, v.productId, {
+        orderItemId: v.orderItemId,
         rating: v.rating,
         comment: v.comment,
         imageUrls: v.imageUrls,
       }),
     onSuccess: (review) => {
-      client.invalidateQueries({ queryKey: ["product", review.productId] });
-      client.invalidateQueries({ queryKey: queryKeys.order(review.orderId) });
+      invalidateProductReviewSurface(client, review.productId, review.orderId);
+    },
+  });
+}
+export function useUpdateProductReview() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      reviewId: string;
+      productId: string;
+      orderId?: string;
+      body: import("./types").ProductReviewUpdateInput;
+    }) => reviewApi.updateProductReview(v.reviewId, v.body),
+    onSuccess: (review) => {
+      invalidateProductReviewSurface(client, review.productId, review.orderId);
+    },
+  });
+}
+export function useDeleteProductReview() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { reviewId: string; productId: string; orderId?: string }) =>
+      reviewApi.deleteProductReview(v.reviewId).then(() => v),
+    onSuccess: (v) => {
+      invalidateProductReviewSurface(client, v.productId, v.orderId);
     },
   });
 }
