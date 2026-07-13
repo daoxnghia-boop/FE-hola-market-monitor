@@ -261,7 +261,6 @@ function ShopDetailPage() {
               key={p.id}
               product={p}
               layout="row"
-              onSelect={openProduct}
               disabled={!canOrder}
               disabledLabel={productDisabledLabel}
             />
@@ -269,12 +268,6 @@ function ShopDetailPage() {
         )}
       </section>
 
-      <ProductSheet
-        product={selected}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        canOrder={canOrder}
-      />
       <BottomCartBar />
     </AppShell>
   );
