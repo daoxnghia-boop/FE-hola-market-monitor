@@ -1,11 +1,15 @@
 export type Paginated<T> = { items: T[]; nextCursor?: string | null };
 
+export type UserRole = "customer" | "shop_owner" | "admin";
+export type UserStatus = "active" | "blocked";
+
 export type CategoryDto = {
   id: string;
   name: string;
   iconUrl?: string;
   iconText?: string;
   sortOrder: number;
+  active?: boolean;
 };
 
 export type DeliveryZoneDto = {
@@ -17,6 +21,8 @@ export type DeliveryZoneDto = {
 };
 
 export type ShopStatus = "open" | "break" | "out_of_menu" | "closed";
+export type ShopApprovalStatus = "pending" | "approved" | "rejected";
+export type ShopOperationStatus = "active" | "suspended";
 
 export type ShopDto = {
   id: string;
@@ -40,6 +46,13 @@ export type ShopDto = {
   supportedZoneIds: string[];
   isFavorite: boolean;
   delivery?: { supported: boolean; fee: number | null };
+  // admin fields
+  approvalStatus?: ShopApprovalStatus;
+  operationStatus?: ShopOperationStatus;
+  ownerName?: string;
+  ownerPhone?: string;
+  createdAt?: string;
+  orderCount?: number;
 };
 
 export type ProductDto = {
@@ -59,7 +72,7 @@ export type ProductDto = {
 };
 
 export type VoucherStatus =
-  "usable" | "soon_expire" | "used" | "expired" | "locked" | "not_eligible";
+  "usable" | "soon_expire" | "used" | "expired" | "locked" | "not_eligible" | "disabled";
 
 export type VoucherDto = {
   id: string;
@@ -71,8 +84,15 @@ export type VoucherDto = {
   maxDiscount?: number;
   minOrderAmount: number;
   expiresAt: string;
+  startsAt?: string;
   status: VoucherStatus;
   ineligibleReason?: string;
+  usageLimit?: number;
+  perUserLimit?: number;
+  usedCount?: number;
+  applicableShopIds?: string[];
+  applicableZoneIds?: string[];
+  enabled?: boolean;
 };
 
 export type UserDto = {
@@ -83,6 +103,9 @@ export type UserDto = {
   avatarUrl?: string;
   defaultAddressId?: string;
   defaultDeliveryZoneId?: string;
+  role: UserRole;
+  status: UserStatus;
+  createdAt: string;
 };
 
 export type AddressDto = {
@@ -152,6 +175,8 @@ export type OrderSummaryDto = {
   canCancel: boolean;
   canReview: boolean;
   canReorder: boolean;
+  customerName?: string;
+  customerPhone?: string;
 };
 
 export type ReviewDto = {
@@ -184,6 +209,7 @@ export type OrderDetailDto = OrderSummaryDto & {
   statusHistory: Array<{ status: OrderStatus; occurredAt: string; note?: string }>;
   cancellation?: { reason?: string; canceledAt: string; canceledBy: string };
   review?: ReviewDto;
+  customerId?: string;
 };
 
 export type NotificationType = "order" | "voucher" | "shop" | "system";
@@ -196,6 +222,7 @@ export type NotificationDto = {
   createdAt: string;
   readAt: string | null;
   target?: { type: "order" | "voucher" | "shop" | "url"; id?: string; url?: string };
+  userId?: string;
 };
 
 export type SessionDto = { authenticated: boolean; user: UserDto | null };
@@ -204,4 +231,55 @@ export type SearchDto = {
   shops: { items: ShopDto[]; total: number };
   products: { items: ProductDto[]; total: number };
   nextCursor?: string | null;
+};
+
+// Auth DTOs
+export type OtpChallengeDto = {
+  challengeId: string;
+  expiresInSeconds: number;
+  developmentOtp?: string;
+  requiresRegistration?: boolean;
+};
+
+export type VerifyOtpResultDto = {
+  status: "authenticated" | "requires_registration";
+  session?: SessionDto;
+  phone?: string;
+};
+
+export type RegisterInput = {
+  fullName: string;
+  phone: string;
+  email?: string;
+  acceptedTerms: boolean;
+};
+
+// Admin DTOs
+export type AdminAuditDto = {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  adminUserId: string;
+  adminName: string;
+  reason?: string;
+  createdAt: string;
+};
+
+export type AdminStatsDto = {
+  totalCustomers: number;
+  activeShops: number;
+  pendingShops: number;
+  ordersToday: number;
+  revenueToday: number;
+  cancelledToday: number;
+  ordersByStatus: Array<{ status: OrderStatus; count: number }>;
+  trend7d: Array<{ date: string; orders: number; revenue: number }>;
+  latestOrders: OrderSummaryDto[];
+  pendingApprovalShops: ShopDto[];
+};
+
+export type AdminUserSummaryDto = UserDto & {
+  orderCount: number;
+  totalSpending: number;
 };

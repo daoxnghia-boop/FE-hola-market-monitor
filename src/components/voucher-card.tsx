@@ -11,6 +11,7 @@ const STATUS_TONE: Record<VoucherStatus, string> = {
   expired: "bg-muted text-muted-foreground",
   locked: "bg-muted text-muted-foreground",
   not_eligible: "bg-muted text-muted-foreground",
+  disabled: "bg-muted text-muted-foreground",
 };
 
 export function VoucherCard({

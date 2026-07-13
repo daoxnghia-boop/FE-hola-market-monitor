@@ -11,6 +11,9 @@ import type {
   VoucherDto,
 } from "../types";
 
+const nowIso = () => new Date().toISOString();
+const daysAgo = (d: number) => new Date(Date.now() - d * 86400e3).toISOString();
+
 export const zones: DeliveryZoneDto[] = [
   { id: "z1", name: "Khu đại học FPT", shortName: "ĐH FPT", baseDeliveryFee: 10000, active: true },
   { id: "z2", name: "KTX FPT", shortName: "KTX FPT", baseDeliveryFee: 12000, active: true },
@@ -19,12 +22,12 @@ export const zones: DeliveryZoneDto[] = [
 ];
 
 export const categories: CategoryDto[] = [
-  { id: "c1", name: "Cơm", iconText: "🍚", sortOrder: 1 },
-  { id: "c2", name: "Bún/Phở", iconText: "🍜", sortOrder: 2 },
-  { id: "c3", name: "Bánh mì", iconText: "🥖", sortOrder: 3 },
-  { id: "c4", name: "Trà sữa", iconText: "🧋", sortOrder: 4 },
-  { id: "c5", name: "Ăn vặt", iconText: "🍡", sortOrder: 5 },
-  { id: "c6", name: "Cà phê", iconText: "☕", sortOrder: 6 },
+  { id: "c1", name: "Cơm", iconText: "🍚", sortOrder: 1, active: true },
+  { id: "c2", name: "Bún/Phở", iconText: "🍜", sortOrder: 2, active: true },
+  { id: "c3", name: "Bánh mì", iconText: "🥖", sortOrder: 3, active: true },
+  { id: "c4", name: "Trà sữa", iconText: "🧋", sortOrder: 4, active: true },
+  { id: "c5", name: "Ăn vặt", iconText: "🍡", sortOrder: 5, active: true },
+  { id: "c6", name: "Cà phê", iconText: "☕", sortOrder: 6, active: true },
 ];
 
 const img = (seed: string) => `https://picsum.photos/seed/${seed}/600/400`;
@@ -39,6 +42,8 @@ export const shops: ShopDto[] = [
     categoryIds: ["c1"], description: "Cơm nhà nấu, đầy đủ canh rau.",
     phone: "0912345678", openHoursText: "10:00 – 21:00",
     supportedZoneIds: ["z1", "z2", "z3"], isFavorite: false,
+    approvalStatus: "approved", operationStatus: "active",
+    ownerName: "Cô Lan", ownerPhone: "0912345678", createdAt: daysAgo(120), orderCount: 340,
   },
   {
     id: "s2", slug: "bun-cha-co-ba", name: "Bún Chả Cô Ba",
@@ -49,6 +54,8 @@ export const shops: ShopDto[] = [
     categoryIds: ["c2"], description: "Bún chả, nem rán truyền thống.",
     phone: "0987654321", openHoursText: "09:00 – 20:00",
     supportedZoneIds: ["z1", "z3", "z4"], isFavorite: true,
+    approvalStatus: "approved", operationStatus: "active",
+    ownerName: "Cô Ba", ownerPhone: "0987654321", createdAt: daysAgo(90), orderCount: 210,
   },
   {
     id: "s3", slug: "banh-mi-anh-tuan", name: "Bánh Mì Anh Tuấn",
@@ -59,6 +66,8 @@ export const shops: ShopDto[] = [
     categoryIds: ["c3"], description: "Bánh mì pate, xíu mại, chả cá.",
     phone: "0901112233", openHoursText: "06:00 – 22:00",
     supportedZoneIds: ["z1", "z2"], isFavorite: false,
+    approvalStatus: "approved", operationStatus: "active",
+    ownerName: "Anh Tuấn", ownerPhone: "0901112233", createdAt: daysAgo(60), orderCount: 500,
   },
   {
     id: "s4", slug: "tra-sua-mimi", name: "Trà Sữa Mimi",
@@ -69,6 +78,8 @@ export const shops: ShopDto[] = [
     categoryIds: ["c4"], description: "Trà sữa trân châu, macchiato.",
     phone: "0977888999", openHoursText: "08:00 – 22:30",
     supportedZoneIds: ["z1", "z2", "z3"], isFavorite: false,
+    approvalStatus: "approved", operationStatus: "active",
+    ownerName: "Chị Mi", ownerPhone: "0977888999", createdAt: daysAgo(45), orderCount: 620,
   },
   {
     id: "s5", slug: "quan-oc-hoa-lac", name: "Quán Ốc Hòa Lạc",
@@ -79,6 +90,8 @@ export const shops: ShopDto[] = [
     categoryIds: ["c5"], description: "Ốc luộc, ốc xào me, nem chua rán.",
     phone: "0966555444", openHoursText: "16:00 – 23:00",
     supportedZoneIds: ["z3", "z4"], isFavorite: false,
+    approvalStatus: "approved", operationStatus: "suspended",
+    ownerName: "Chú Tư", ownerPhone: "0966555444", createdAt: daysAgo(30), orderCount: 80,
   },
   {
     id: "s6", slug: "cafe-highland-fpt", name: "Cafe Sáng FPT",
@@ -89,6 +102,32 @@ export const shops: ShopDto[] = [
     categoryIds: ["c6"], description: "Cà phê take-away, bạc xỉu, latte.",
     phone: "0933222111", openHoursText: "07:00 – 21:00",
     supportedZoneIds: ["z1", "z2"], isFavorite: false,
+    approvalStatus: "approved", operationStatus: "active",
+    ownerName: "Anh Hoàng", ownerPhone: "0933222111", createdAt: daysAgo(20), orderCount: 140,
+  },
+  {
+    id: "s7", slug: "com-tam-sai-gon", name: "Cơm Tấm Sài Gòn",
+    logoUrl: img("ct-logo"), coverUrl: img("ct-cover"),
+    rating: 0, reviewCount: 0, address: "Ngã 3 Hòa Lạc",
+    area: "TT Thạch Thất", distanceKm: 2.8, status: "closed", isOpen: false,
+    prepTimeMinutes: 15, estimatedDeliveryMinutes: 30,
+    categoryIds: ["c1"], description: "Cơm tấm sườn bì chả (đang chờ duyệt).",
+    phone: "0944333222", openHoursText: "10:00 – 21:00",
+    supportedZoneIds: ["z3", "z4"], isFavorite: false,
+    approvalStatus: "pending", operationStatus: "active",
+    ownerName: "Anh Sang", ownerPhone: "0944333222", createdAt: daysAgo(3), orderCount: 0,
+  },
+  {
+    id: "s8", slug: "pho-bo-hn", name: "Phở Bò Hà Nội",
+    logoUrl: img("pho-logo"), coverUrl: img("pho-cover"),
+    rating: 0, reviewCount: 0, address: "Khu 3, Hòa Lạc",
+    area: "VP Hòa Lạc", distanceKm: 2.5, status: "closed", isOpen: false,
+    prepTimeMinutes: 12, estimatedDeliveryMinutes: 25,
+    categoryIds: ["c2"], description: "Phở bò truyền thống HN.",
+    phone: "0922111000", openHoursText: "06:00 – 14:00",
+    supportedZoneIds: ["z1", "z3"], isFavorite: false,
+    approvalStatus: "rejected", operationStatus: "active",
+    ownerName: "Cô Hoa", ownerPhone: "0922111000", createdAt: daysAgo(10), orderCount: 0,
   },
 ];
 
@@ -127,18 +166,21 @@ export const vouchers: VoucherDto[] = [
     description: "Áp dụng cho tất cả quán quanh Hòa Lạc.",
     discountType: "fixed", discountValue: 10000, minOrderAmount: 50000,
     expiresAt: new Date(Date.now() + 7 * 86400e3).toISOString(), status: "usable",
+    startsAt: daysAgo(2), usageLimit: 1000, perUserLimit: 5, usedCount: 42, enabled: true,
   },
   {
     id: "v2", code: "FREESHIP", title: "Miễn phí ship",
     description: "Giảm tối đa 15K phí vận chuyển.",
     discountType: "fixed", discountValue: 15000, maxDiscount: 15000, minOrderAmount: 30000,
     expiresAt: new Date(Date.now() + 3 * 86400e3).toISOString(), status: "soon_expire",
+    startsAt: daysAgo(10), usageLimit: 500, perUserLimit: 3, usedCount: 210, enabled: true,
   },
   {
     id: "v3", code: "SINHVIEN20", title: "Sinh viên FPT giảm 20%",
     description: "Đơn tối đa 50K, chỉ cho khu ĐH FPT.",
     discountType: "percent", discountValue: 20, maxDiscount: 50000, minOrderAmount: 60000,
     expiresAt: new Date(Date.now() + 14 * 86400e3).toISOString(), status: "usable",
+    applicableZoneIds: ["z1", "z2"], usedCount: 65, enabled: true,
   },
   {
     id: "v4", code: "TRASUA15", title: "Giảm 15K cho trà sữa",
@@ -146,21 +188,74 @@ export const vouchers: VoucherDto[] = [
     discountType: "fixed", discountValue: 15000, minOrderAmount: 40000,
     expiresAt: new Date(Date.now() + 10 * 86400e3).toISOString(), status: "not_eligible",
     ineligibleReason: "Chưa đủ điều kiện đơn tối thiểu.",
+    applicableShopIds: ["s4"], usedCount: 12, enabled: true,
+  },
+  {
+    id: "v5", code: "CHAOMUNG", title: "Chào mừng khách mới 20K",
+    description: "Áp dụng đơn đầu tiên.",
+    discountType: "fixed", discountValue: 20000, minOrderAmount: 40000,
+    expiresAt: new Date(Date.now() + 30 * 86400e3).toISOString(), status: "usable",
+    usedCount: 0, enabled: true,
+  },
+  {
+    id: "v6", code: "HETHAN", title: "Voucher đã hết hạn",
+    description: "Voucher demo trạng thái hết hạn.",
+    discountType: "fixed", discountValue: 5000, minOrderAmount: 20000,
+    expiresAt: daysAgo(1), status: "expired", enabled: true,
   },
 ];
 
-export const defaultUser: UserDto = {
-  id: "u1", fullName: "Bạn HoLa", phone: "0900000000",
-  email: "hola@example.com", defaultDeliveryZoneId: "z1",
+// Seeded accounts
+export const seedCustomerUser: UserDto = {
+  id: "u1", fullName: "Nguyễn Hoàng Minh", phone: "0900000000",
+  email: "minh@example.com", defaultDeliveryZoneId: "z1",
+  role: "customer", status: "active", createdAt: daysAgo(60),
 };
+
+export const seedAdminUser: UserDto = {
+  id: "u-admin", fullName: "HoLa Market Admin", phone: "0909999999",
+  email: "admin@holamarket.vn", role: "admin", status: "active", createdAt: daysAgo(200),
+};
+
+export const seedBlockedUser: UserDto = {
+  id: "u-blocked", fullName: "Tài khoản bị khóa", phone: "0901111111",
+  role: "customer", status: "blocked", createdAt: daysAgo(40),
+};
+
+// Additional mock customers
+const extraCustomers: UserDto[] = [
+  ["u2", "Trần Thu Hà", "0912000001"],
+  ["u3", "Lê Quang Vinh", "0912000002"],
+  ["u4", "Phạm Ngọc Anh", "0912000003"],
+  ["u5", "Đỗ Minh Tuấn", "0912000004"],
+  ["u6", "Vũ Thị Mai", "0912000005"],
+  ["u7", "Hoàng Bảo Nam", "0912000006"],
+  ["u8", "Ngô Phương Linh", "0912000007"],
+  ["u9", "Bùi Đức Hùng", "0912000008"],
+  ["u10", "Đặng Ngọc Trâm", "0912000009"],
+  ["u11", "Lý Hoài Sơn", "0912000010"],
+  ["u12", "Trịnh Thu Uyên", "0912000011"],
+  ["u13", "Cao Xuân Trường", "0912000012"],
+  ["u14", "Dương Ánh Nguyệt", "0912000013"],
+  ["u15", "Chu Đình Khang", "0912000014"],
+].map(([id, fullName, phone], i) => ({
+  id: id as string, fullName: fullName as string, phone: phone as string,
+  role: "customer" as const, status: "active" as const, createdAt: daysAgo(50 - i * 2),
+}));
+
+export const seedUsers: UserDto[] = [
+  seedCustomerUser, seedAdminUser, seedBlockedUser, ...extraCustomers,
+];
+
+export const defaultUser = seedCustomerUser;
 
 export const defaultAddresses: AddressDto[] = [
   {
-    id: "a1", label: "KTX", recipientName: "Bạn HoLa", phone: "0900000000",
+    id: "a1", label: "KTX", recipientName: "Nguyễn Hoàng Minh", phone: "0900000000",
     deliveryZoneId: "z2", addressLine: "Phòng 302, KTX FPT", isDefault: true,
   },
   {
-    id: "a2", label: "Văn phòng", recipientName: "Bạn HoLa", phone: "0900000000",
+    id: "a2", label: "Văn phòng", recipientName: "Nguyễn Hoàng Minh", phone: "0900000000",
     deliveryZoneId: "z3", addressLine: "Tòa CNC, Hòa Lạc", isDefault: false,
   },
 ];
@@ -170,13 +265,13 @@ export const seedNotifications: NotificationDto[] = [
     id: "n1", type: "voucher", title: "Voucher mới HOLA10",
     body: "Nhập mã HOLA10 để giảm 10K cho đơn từ 50K.",
     createdAt: new Date(Date.now() - 3600e3).toISOString(), readAt: null,
-    target: { type: "voucher", id: "v1" },
+    target: { type: "voucher", id: "v1" }, userId: "u1",
   },
   {
     id: "n2", type: "shop", title: "Quán mới: Cafe Sáng FPT",
     body: "Cafe Sáng FPT vừa lên HoLa Market.",
     createdAt: new Date(Date.now() - 2 * 3600e3).toISOString(), readAt: null,
-    target: { type: "shop", id: "s6" },
+    target: { type: "shop", id: "s6" }, userId: "u1",
   },
 ];
 
@@ -185,61 +280,87 @@ export const seedReviews: ReviewDto[] = [
     id: "r1", orderId: "o-seed", shopId: "s1",
     user: { id: "u2", displayName: "Minh Anh" },
     rating: 5, comment: "Cơm ngon, giao nhanh.",
-    createdAt: new Date(Date.now() - 5 * 86400e3).toISOString(),
+    createdAt: daysAgo(5),
   },
   {
     id: "r2", orderId: "o-seed2", shopId: "s2",
     user: { id: "u3", displayName: "Quang" },
     rating: 4, comment: "Bún chả ổn, nước chấm hơi ngọt.",
-    createdAt: new Date(Date.now() - 2 * 86400e3).toISOString(),
+    createdAt: daysAgo(2),
   },
 ];
 
-export const seedOrders: OrderDetailDto[] = [
-  {
-    id: "o1", displayCode: "HL2607-001", shopId: "s1", shopName: "Cơm Nhà Lan",
-    shopLogoUrl: shops[0].logoUrl, status: "dang_giao",
-    itemSummary: "2× Cơm sườn nướng", itemCount: 2, total: 80000,
-    placedAt: new Date(Date.now() - 30 * 60e3).toISOString(),
-    canCancel: false, canReview: false, canReorder: true,
-    shopPhone: "0912345678", shopAddress: "Ngõ 12, KĐT FPT",
-    items: [
-      { productId: "p1", productName: "Cơm sườn nướng", productImageUrl: img("p-p1"),
-        quantity: 2, unitPrice: 35000, lineTotal: 70000 },
-    ],
-    pricing: { subtotal: 70000, discount: 0, deliveryFee: 10000, total: 80000 },
-    paymentMethod: "cash_on_delivery", paymentStatus: "unpaid",
+// Build many mock orders for admin
+const buildOrder = (
+  i: number, shopIdx: number, custIdx: number, status: OrderDetailDto["status"],
+  daysAgoN: number, prodIds: string[], qtys: number[],
+): OrderDetailDto => {
+  const shop = shops[shopIdx];
+  const customer = extraCustomers[custIdx % extraCustomers.length] ?? seedCustomerUser;
+  const items = prodIds.map((pid, k) => {
+    const p = products.find((x) => x.id === pid)!;
+    const q = qtys[k];
+    return {
+      productId: p.id, productName: p.name, productImageUrl: p.imageUrl,
+      quantity: q, unitPrice: p.price, lineTotal: p.price * q,
+    };
+  });
+  const subtotal = items.reduce((n, it) => n + it.lineTotal, 0);
+  const deliveryFee = 15000;
+  const total = subtotal + deliveryFee;
+  const placedAt = new Date(Date.now() - daysAgoN * 86400e3 - i * 3600e3).toISOString();
+  const id = `o-seed-${i}`;
+  return {
+    id, displayCode: `HL${(1000 + i).toString()}`,
+    shopId: shop.id, shopName: shop.name, shopLogoUrl: shop.logoUrl,
+    status, itemSummary: items.map((it) => `${it.quantity}× ${it.productName}`).join(", "),
+    itemCount: items.reduce((n, it) => n + it.quantity, 0), total, placedAt,
+    canCancel: status === "cho_quan_xac_nhan" || status === "quan_da_xac_nhan",
+    canReview: status === "hoan_thanh", canReorder: true,
+    customerId: customer.id, customerName: customer.fullName, customerPhone: customer.phone,
+    shopPhone: shop.phone, shopAddress: shop.address, items,
+    pricing: { subtotal, discount: 0, deliveryFee, total },
+    paymentMethod: "cash_on_delivery",
+    paymentStatus: status === "hoan_thanh" ? "paid" : "unpaid",
     delivery: {
-      zoneId: "z1", zoneName: "Khu đại học FPT", recipientName: "Bạn HoLa",
-      phone: "0900000000", addressLine: "Phòng 302, KTX FPT", etaMinutes: 15,
+      zoneId: "z1", zoneName: "Khu đại học FPT",
+      recipientName: customer.fullName, phone: customer.phone,
+      addressLine: "Phòng 302, KTX FPT",
     },
-    statusHistory: [
-      { status: "cho_quan_xac_nhan", occurredAt: new Date(Date.now() - 30 * 60e3).toISOString() },
-      { status: "quan_da_xac_nhan", occurredAt: new Date(Date.now() - 25 * 60e3).toISOString() },
-      { status: "dang_chuan_bi", occurredAt: new Date(Date.now() - 20 * 60e3).toISOString() },
-      { status: "dang_giao", occurredAt: new Date(Date.now() - 10 * 60e3).toISOString() },
-    ],
+    statusHistory: [{ status: "cho_quan_xac_nhan", occurredAt: placedAt }, { status, occurredAt: placedAt }],
+  };
+};
+
+export const seedOrders: OrderDetailDto[] = [
+  buildOrder(1, 0, 0, "dang_giao", 0, ["p1"], [2]),
+  buildOrder(2, 2, 1, "hoan_thanh", 0, ["p7"], [3]),
+  buildOrder(3, 1, 2, "cho_quan_xac_nhan", 0, ["p4"], [1]),
+  buildOrder(4, 3, 3, "hoan_thanh", 0, ["p10", "p11"], [2, 1]),
+  buildOrder(5, 0, 4, "dang_chuan_bi", 0, ["p2"], [1]),
+  buildOrder(6, 5, 5, "hoan_thanh", 1, ["p15"], [2]),
+  buildOrder(7, 2, 6, "hoan_thanh", 1, ["p8"], [2]),
+  buildOrder(8, 1, 7, "da_huy", 1, ["p4"], [1]),
+  buildOrder(9, 3, 8, "hoan_thanh", 2, ["p10"], [3]),
+  buildOrder(10, 0, 9, "hoan_thanh", 2, ["p1", "p3"], [1, 1]),
+  buildOrder(11, 2, 10, "hoan_thanh", 3, ["p9"], [4]),
+  buildOrder(12, 5, 11, "hoan_thanh", 3, ["p16"], [2]),
+  buildOrder(13, 1, 12, "hoan_thanh", 4, ["p6"], [1]),
+  buildOrder(14, 3, 0, "hoan_thanh", 4, ["p12"], [2]),
+  buildOrder(15, 0, 1, "da_huy", 5, ["p2"], [1]),
+  buildOrder(16, 2, 2, "hoan_thanh", 5, ["p7"], [2]),
+  buildOrder(17, 3, 3, "hoan_thanh", 5, ["p10"], [1]),
+  buildOrder(18, 5, 4, "hoan_thanh", 6, ["p15", "p17"], [1, 1]),
+  buildOrder(19, 1, 5, "hoan_thanh", 6, ["p4", "p5"], [1, 1]),
+  buildOrder(20, 0, 6, "hoan_thanh", 6, ["p3"], [2]),
+  // Personal orders for u1 (default customer)
+  {
+    ...buildOrder(21, 0, 0, "dang_giao", 0, ["p1"], [2]),
+    id: "o1", displayCode: "HL2607-001",
+    customerId: "u1", customerName: seedCustomerUser.fullName, customerPhone: seedCustomerUser.phone,
   },
   {
-    id: "o2", displayCode: "HL2506-018", shopId: "s3", shopName: "Bánh Mì Anh Tuấn",
-    shopLogoUrl: shops[2].logoUrl, status: "hoan_thanh",
-    itemSummary: "3× Bánh mì pate", itemCount: 3, total: 70000,
-    placedAt: new Date(Date.now() - 2 * 86400e3).toISOString(),
-    canCancel: false, canReview: true, canReorder: true,
-    shopPhone: "0901112233", shopAddress: "Đối diện KTX FPT",
-    items: [
-      { productId: "p7", productName: "Bánh mì pate", productImageUrl: img("p-p7"),
-        quantity: 3, unitPrice: 20000, lineTotal: 60000 },
-    ],
-    pricing: { subtotal: 60000, discount: 0, deliveryFee: 10000, total: 70000 },
-    paymentMethod: "cash_on_delivery", paymentStatus: "paid",
-    delivery: {
-      zoneId: "z2", zoneName: "KTX FPT", recipientName: "Bạn HoLa",
-      phone: "0900000000", addressLine: "Phòng 302, KTX FPT",
-    },
-    statusHistory: [
-      { status: "cho_quan_xac_nhan", occurredAt: new Date(Date.now() - 2 * 86400e3).toISOString() },
-      { status: "hoan_thanh", occurredAt: new Date(Date.now() - 2 * 86400e3 + 40 * 60e3).toISOString() },
-    ],
+    ...buildOrder(22, 2, 0, "hoan_thanh", 2, ["p7"], [3]),
+    id: "o2", displayCode: "HL2506-018", canReview: true,
+    customerId: "u1", customerName: seedCustomerUser.fullName, customerPhone: seedCustomerUser.phone,
   },
 ];
