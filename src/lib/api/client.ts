@@ -56,6 +56,22 @@ export async function apiRequest<T>(
   } = {},
 ): Promise<T> {
   const { query, body, idempotencyKey, headers, ...init } = options;
+  const method = (init.method || "GET").toUpperCase();
+
+  // Route through mock API when enabled (default true until real backend is live).
+  const { isMockEnabled, handleMock } = await import("./mock");
+  if (isMockEnabled()) {
+    try {
+      return await handleMock<T>(method, path.startsWith("/") ? path : `/${path}`, query ?? {}, body);
+    } catch (err) {
+      const e = err as Error & { __apiStatus?: number; __apiCode?: string };
+      if (e.__apiStatus) {
+        throw new ApiError(e.__apiStatus, { error: { code: e.__apiCode, message: e.message } });
+      }
+      throw new ApiError(500, { error: { code: "MOCK_ERROR", message: e.message } });
+    }
+  }
+
   try {
     const response = await fetch(buildUrl(path, query), {
       ...init,
