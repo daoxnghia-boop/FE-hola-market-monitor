@@ -695,6 +695,26 @@ export const seedOrders: OrderDetailDto[] = [
     customerName: seedCustomerUser.fullName,
     customerPhone: seedCustomerUser.phone,
   },
+  // Two completed personal orders for u1 with p1 — supports "multiple
+  // eligible completed purchases of the same product" test.
+  {
+    ...buildOrder(23, 0, 0, "hoan_thanh", 3, ["p1"], [1]),
+    id: "o3",
+    displayCode: "HL2606-001",
+    canReview: true,
+    customerId: "u1",
+    customerName: seedCustomerUser.fullName,
+    customerPhone: seedCustomerUser.phone,
+  },
+  {
+    ...buildOrder(24, 0, 0, "hoan_thanh", 8, ["p1", "p2"], [2, 1]),
+    id: "o4",
+    displayCode: "HL2506-004",
+    canReview: true,
+    customerId: "u1",
+    customerName: seedCustomerUser.fullName,
+    customerPhone: seedCustomerUser.phone,
+  },
 ];
 
 // -------- Product-scoped reviews (independent from shop reviews) --------
