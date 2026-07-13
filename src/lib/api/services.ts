@@ -75,10 +75,35 @@ export const catalogApi = {
   products: (query: Record<string, unknown> = {}) =>
     apiRequest<Paginated<ProductDto>>("/products", { query }),
   product: (productId: string, deliveryZoneId?: string) =>
-    apiRequest<ProductDto>(`/products/${productId}`, { query: { deliveryZoneId } }),
+    apiRequest<ProductDetailDto>(`/products/${productId}`, { query: { deliveryZoneId } }),
   popularProducts: (deliveryZoneId?: string, limit = 6) =>
     apiRequest<{ items: ProductDto[] }>("/products/popular", { query: { deliveryZoneId, limit } }),
   search: (query: Record<string, unknown>) => apiRequest<SearchDto>("/search", { query }),
+  productReviews: (productId: string, params: ProductReviewListParams = {}) =>
+    apiRequest<ProductReviewListDto>(`/products/${productId}/reviews`, {
+      query: {
+        rating: params.rating,
+        sort: params.sort,
+        pageSize: params.pageSize,
+        cursor: params.cursor,
+      },
+    }),
+  productReviewSummary: (productId: string) =>
+    apiRequest<ProductReviewSummaryDto>(`/products/${productId}/review-summary`),
+  relatedProducts: (
+    productId: string,
+    opts: { deliveryZoneId?: string; limit?: number } = {},
+  ) =>
+    apiRequest<{ items: ProductDto[] }>(`/products/${productId}/related`, {
+      query: { deliveryZoneId: opts.deliveryZoneId, limit: opts.limit },
+    }),
+  productsFromSameShop: (
+    productId: string,
+    opts: { deliveryZoneId?: string; limit?: number } = {},
+  ) =>
+    apiRequest<{ items: ProductDto[] }>(`/products/${productId}/same-shop`, {
+      query: { deliveryZoneId: opts.deliveryZoneId, limit: opts.limit },
+    }),
 };
 
 export const voucherApi = {
