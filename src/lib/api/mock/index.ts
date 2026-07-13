@@ -935,6 +935,8 @@ async function route(ctx: Ctx): Promise<unknown> {
         delete (b as Record<string, unknown>).reviewCount;
         delete (b as Record<string, unknown>).orderCount;
         Object.assign(shop, b);
+        // Ensure delivery fees are trimmed to currently-supported zones.
+        shop.deliveryFees = sanitizeDeliveryFees(shop.deliveryFees, shop.supportedZoneIds);
         save();
         return ok(shop);
       }
