@@ -124,7 +124,7 @@ function AdminDashboard() {
                   <div className="min-w-0">
                     <div className="truncate font-semibold">{o.displayCode} · {o.shopName}</div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {o.customerName ?? "—"} · {orderStatusLabel(o.status)}
+                      {o.customerName ?? "—"} · {ORDER_STATUS_LABEL[o.status]}
                     </div>
                   </div>
                   <div className="font-bold">{formatVND(o.total)}</div>
