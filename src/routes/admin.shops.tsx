@@ -126,14 +126,21 @@ function AdminShops() {
 
   const doAction = async () => {
     if (!confirm) return;
+    const labels: Record<typeof confirm.action, string> = {
+      approve: "Đã duyệt quán",
+      reject: "Đã từ chối quán",
+      suspend: "Đã tạm ngưng quán",
+      activate: "Đã kích hoạt quán",
+    };
     try {
       await action.mutateAsync({ id: confirm.shop.id, action: confirm.action });
-      toast.success("Đã cập nhật quán.");
+      toast.success(labels[confirm.action], { description: confirm.shop.name });
     } catch (e) {
-      toast.error(apiErrorMessage(e));
+      toast.error("Thao tác thất bại", { description: apiErrorMessage(e) });
     }
     setConfirm(null);
   };
+
 
   return (
     <div className="space-y-4">
