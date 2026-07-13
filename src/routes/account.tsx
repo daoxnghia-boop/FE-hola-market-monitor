@@ -19,6 +19,18 @@ import {
 } from "lucide-react";
 import { useAddresses, useLogout, useOwnerShops, useSession } from "@/lib/api/hooks";
 
+const APPROVAL_LABEL: Record<string, string> = {
+  approved: "Đã duyệt",
+  pending: "Chờ duyệt",
+  rejected: "Bị từ chối",
+  draft: "Nháp",
+};
+const OPERATION_LABEL: Record<string, string> = {
+  active: "Đang hoạt động",
+  paused: "Tạm dừng nhận đơn",
+  suspended: "Bị Admin tạm khóa",
+};
+
 export const Route = createFileRoute("/account")({
   head: () => ({ meta: [{ title: "Tài khoản — HoLa Market" }] }),
   component: AccountPage,
