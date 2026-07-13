@@ -11,7 +11,14 @@ import {
   userApi,
   voucherApi,
 } from "./services";
-import type { CartDto, DeliveryZoneDto, ShopDto, ShopRegistrationInput, UserDto } from "./types";
+import type {
+  CartDto,
+  DeliveryZoneDto,
+  ProductReviewListParams,
+  ShopDto,
+  ShopRegistrationInput,
+  UserDto,
+} from "./types";
 
 export const queryKeys = {
   session: ["session"] as const,
