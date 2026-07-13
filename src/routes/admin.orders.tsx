@@ -56,11 +56,11 @@ function AdminOrders() {
     if (!confirm || !reason.trim()) return;
     try {
       await cancel.mutateAsync({ id: confirm.id, reason: reason.trim() });
-      toast.success("Đã hủy đơn.");
+      toast.success("Đã hủy đơn", { description: confirm.displayCode });
       setConfirm(null);
       setReason("");
     } catch (e) {
-      toast.error(apiErrorMessage(e));
+      toast.error("Hủy đơn thất bại", { description: apiErrorMessage(e) });
     }
   };
 
