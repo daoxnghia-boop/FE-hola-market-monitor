@@ -64,9 +64,14 @@ const APPROVAL_LABEL: Record<string, string> = {
   draft: "Nháp",
 };
 const OPERATION_LABEL: Record<string, string> = {
-  active: "Hoạt động",
-  suspended: "Tạm ngưng",
-  paused: "Tạm nghỉ",
+  active: "Đang hoạt động",
+  paused: "Tạm dừng nhận đơn",
+  suspended: "Bị Admin tạm khóa",
+};
+const OPERATION_TONE: Record<string, "outline" | "secondary" | "destructive"> = {
+  active: "outline",
+  paused: "secondary",
+  suspended: "destructive",
 };
 
 function AdminShops() {
