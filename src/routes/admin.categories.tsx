@@ -80,12 +80,12 @@ function AdminCategories() {
                   }
                   try {
                     await create.mutateAsync({ name: name.trim(), iconText: icon, sortOrder });
-                    toast.success("Đã tạo danh mục.");
+                    toast.success("Đã tạo danh mục", { description: name.trim() });
                     setOpen(false);
                     setName("");
                     setSortOrder(10);
                   } catch (e) {
-                    toast.error(apiErrorMessage(e));
+                    toast.error("Tạo danh mục thất bại", { description: apiErrorMessage(e) });
                   }
                 }}
                 disabled={create.isPending}
@@ -129,9 +129,13 @@ function AdminCategories() {
                       onCheckedChange={async (v) => {
                         try {
                           await update.mutateAsync({ id: c.id, body: { active: v } });
-                          toast.success("Đã cập nhật.");
+                          toast.success(v ? "Đã hiện danh mục" : "Đã ẩn danh mục", {
+                            description: c.name,
+                          });
                         } catch (e) {
-                          toast.error(apiErrorMessage(e));
+                          toast.error("Cập nhật danh mục thất bại", {
+                            description: apiErrorMessage(e),
+                          });
                         }
                       }}
                     />

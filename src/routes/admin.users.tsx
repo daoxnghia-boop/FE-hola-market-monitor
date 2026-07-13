@@ -62,19 +62,19 @@ function AdminUsers() {
     if (!blockTarget || !reason.trim()) return;
     try {
       await action.mutateAsync({ id: blockTarget.id, action: "block", reason: reason.trim() });
-      toast.success("Đã khóa tài khoản.");
+      toast.success("Đã khóa tài khoản", { description: blockTarget.fullName });
       setBlockTarget(null);
       setReason("");
     } catch (e) {
-      toast.error(apiErrorMessage(e));
+      toast.error("Khóa tài khoản thất bại", { description: apiErrorMessage(e) });
     }
   };
   const unblock = async (u: AdminUserSummaryDto) => {
     try {
       await action.mutateAsync({ id: u.id, action: "unblock" });
-      toast.success("Đã mở khóa.");
+      toast.success("Đã mở khóa", { description: u.fullName });
     } catch (e) {
-      toast.error(apiErrorMessage(e));
+      toast.error("Mở khóa thất bại", { description: apiErrorMessage(e) });
     }
   };
 

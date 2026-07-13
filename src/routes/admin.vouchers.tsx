@@ -96,10 +96,10 @@ function AdminVouchers() {
             onSubmit={async (data) => {
               try {
                 await create.mutateAsync({ ...data, status: "usable" });
-                toast.success("Đã tạo voucher.");
+                toast.success("Đã tạo voucher", { description: data.code });
                 setOpen(false);
               } catch (e) {
-                toast.error(apiErrorMessage(e));
+                toast.error("Tạo voucher thất bại", { description: apiErrorMessage(e) });
               }
             }}
             pending={create.isPending}
@@ -161,14 +161,19 @@ function AdminVouchers() {
                         size="sm"
                         variant="outline"
                         onClick={async () => {
+                          const willEnable = v.enabled === false;
                           try {
                             await action.mutateAsync({
                               id: v.id,
-                              action: v.enabled === false ? "enable" : "disable",
+                              action: willEnable ? "enable" : "disable",
                             });
-                            toast.success("Đã cập nhật.");
+                            toast.success(willEnable ? "Đã bật voucher" : "Đã tắt voucher", {
+                              description: v.code,
+                            });
                           } catch (e) {
-                            toast.error(apiErrorMessage(e));
+                            toast.error("Cập nhật voucher thất bại", {
+                              description: apiErrorMessage(e),
+                            });
                           }
                         }}
                       >

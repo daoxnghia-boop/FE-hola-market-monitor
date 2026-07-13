@@ -83,10 +83,10 @@ function AdminZones() {
           baseDeliveryFee: editFee,
         },
       });
-      toast.success("Đã cập nhật khu vực.");
+      toast.success("Đã cập nhật khu vực", { description: editName.trim() });
       setEditing(null);
     } catch (e) {
-      toast.error(apiErrorMessage(e));
+      toast.error("Cập nhật khu vực thất bại", { description: apiErrorMessage(e) });
     }
   };
 
@@ -94,10 +94,10 @@ function AdminZones() {
     if (!deleting) return;
     try {
       await remove.mutateAsync(deleting.id);
-      toast.success("Đã xóa khu vực.");
+      toast.success("Đã xóa khu vực", { description: deleting.name });
       setDeleting(null);
     } catch (e) {
-      toast.error(apiErrorMessage(e));
+      toast.error("Xóa khu vực thất bại", { description: apiErrorMessage(e) });
     }
   };
 
@@ -151,13 +151,13 @@ function AdminZones() {
                       shortName: shortName.trim(),
                       baseDeliveryFee: fee,
                     });
-                    toast.success("Đã tạo khu vực.");
+                    toast.success("Đã tạo khu vực", { description: name.trim() });
                     setOpen(false);
                     setName("");
                     setShortName("");
                     setFee(15000);
                   } catch (e) {
-                    toast.error(apiErrorMessage(e));
+                    toast.error("Tạo khu vực thất bại", { description: apiErrorMessage(e) });
                   }
                 }}
                 disabled={create.isPending}
@@ -202,9 +202,13 @@ function AdminZones() {
                       onCheckedChange={async (v) => {
                         try {
                           await update.mutateAsync({ id: z.id, body: { active: v } });
-                          toast.success("Đã cập nhật.");
+                          toast.success(v ? "Đã bật khu vực" : "Đã tắt khu vực", {
+                            description: z.name,
+                          });
                         } catch (e) {
-                          toast.error(apiErrorMessage(e));
+                          toast.error("Cập nhật khu vực thất bại", {
+                            description: apiErrorMessage(e),
+                          });
                         }
                       }}
                     />
