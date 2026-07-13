@@ -16,7 +16,7 @@ import { useRequireAuth } from "@/lib/require-auth";
 import { apiErrorMessage } from "@/lib/api/client";
 import type { ShopDto } from "@/lib/api/types";
 
-export const Route = createFileRoute("/shop-owner/")({
+export const Route = createFileRoute("/shop-owner/shops/")({
   head: () => ({ meta: [{ title: "Quản lý gian hàng — HoLa Market" }] }),
   component: ShopOwnerHome,
 });
