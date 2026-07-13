@@ -81,25 +81,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Đặt món từ các quán ăn local quanh Hòa Lạc nhanh gọn hơn cả nhắn tin Zalo. Tìm quán, đặt đơn, theo dõi trạng thái dễ dàng.",
+          "Khám phá quán ăn quanh Hòa Lạc: cơm, bún, bánh mì, trà sữa, ăn vặt. Đặt nhanh, theo dõi đơn dễ dàng.",
       },
       { property: "og:title", content: "HoLa Market — Đặt món local quanh bạn" },
       {
         property: "og:description",
         content:
-          "Hòa Lạc Eats is a Vietnamese food ordering web app for convenient local food discovery and purchase.",
+          "Khám phá quán ăn quanh Hòa Lạc: cơm, bún, bánh mì, trà sữa, ăn vặt. Đặt nhanh, theo dõi đơn dễ dàng.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:title", content: "HoLa Market — Đặt món local quanh bạn" },
       {
         name: "description",
         content:
-          "Hòa Lạc Eats is a Vietnamese food ordering web app for convenient local food discovery and purchase.",
+          "Khám phá quán ăn quanh Hòa Lạc: cơm, bún, bánh mì, trà sữa, ăn vặt. Đặt nhanh, theo dõi đơn dễ dàng.",
       },
       {
         name: "twitter:description",
         content:
-          "Hòa Lạc Eats is a Vietnamese food ordering web app for convenient local food discovery and purchase.",
+          "Khám phá quán ăn quanh Hòa Lạc: cơm, bún, bánh mì, trà sữa, ăn vặt. Đặt nhanh, theo dõi đơn dễ dàng.",
       },
       {
         property: "og:image",

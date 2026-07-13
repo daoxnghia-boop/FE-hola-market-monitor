@@ -21,7 +21,7 @@ import { useUnreadCount } from "@/lib/notifications-store";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Ăn Hòa Lạc — Đặt món local quanh bạn" },
+      { title: "HoLa Market — Đặt món local quanh bạn" },
       {
         name: "description",
         content:
