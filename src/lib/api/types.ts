@@ -170,10 +170,39 @@ export type ProductReviewListParams = {
 export type ProductReviewListDto = Paginated<ProductReviewDto>;
 
 export type ProductReviewCreateInput = {
+  orderItemId?: string;
   rating: number;
   comment?: string;
   imageUrls?: string[];
 };
+
+export type ProductReviewUpdateInput = {
+  rating?: number;
+  comment?: string;
+  imageUrls?: string[];
+};
+
+export type ProductReviewEligibilityReason =
+  | "not_authenticated"
+  | "not_purchased"
+  | "order_not_completed"
+  | "already_reviewed"
+  | "eligible";
+
+export type ProductReviewEligibilityDto = {
+  authenticated: boolean;
+  eligible: boolean;
+  reason: ProductReviewEligibilityReason;
+  eligibleOrderItems: Array<{
+    orderId: string;
+    orderCode: string;
+    orderItemId: string;
+    completedAt: string;
+  }>;
+  pendingOrder?: { orderId: string; orderCode: string; status: OrderStatus };
+  existingReview?: ProductReviewDto;
+};
+
 
 export type VoucherStatus =
   | "usable"
