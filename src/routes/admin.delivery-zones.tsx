@@ -83,10 +83,10 @@ function AdminZones() {
           baseDeliveryFee: editFee,
         },
       });
-      toast.success("Đã cập nhật khu vực.");
+      toast.success("Đã cập nhật khu vực", { description: editName.trim() });
       setEditing(null);
     } catch (e) {
-      toast.error(apiErrorMessage(e));
+      toast.error("Cập nhật khu vực thất bại", { description: apiErrorMessage(e) });
     }
   };
 
@@ -94,10 +94,10 @@ function AdminZones() {
     if (!deleting) return;
     try {
       await remove.mutateAsync(deleting.id);
-      toast.success("Đã xóa khu vực.");
+      toast.success("Đã xóa khu vực", { description: deleting.name });
       setDeleting(null);
     } catch (e) {
-      toast.error(apiErrorMessage(e));
+      toast.error("Xóa khu vực thất bại", { description: apiErrorMessage(e) });
     }
   };
 
