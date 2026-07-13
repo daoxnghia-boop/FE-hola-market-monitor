@@ -38,9 +38,9 @@ const OPERATION: Record<
   string,
   { label: string; tone: "default" | "secondary" | "destructive" | "outline" }
 > = {
-  active: { label: "Hoạt động", tone: "outline" },
-  paused: { label: "Tạm nghỉ", tone: "secondary" },
-  suspended: { label: "Bị đình chỉ", tone: "destructive" },
+  active: { label: "Đang hoạt động", tone: "outline" },
+  paused: { label: "Tạm dừng nhận đơn", tone: "secondary" },
+  suspended: { label: "Bị Admin tạm khóa", tone: "destructive" },
 };
 
 function ShopOwnerHome() {
