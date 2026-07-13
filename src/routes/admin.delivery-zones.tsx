@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useAdminZones, useAdminZoneMutations } from "@/lib/api/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +24,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { apiErrorMessage } from "@/lib/api/client";
 import { formatVND } from "@/lib/domain";
+import type { DeliveryZoneDto } from "@/lib/api/types";
 
 export const Route = createFileRoute("/admin/delivery-zones")({
   component: AdminZones,
@@ -33,11 +44,61 @@ export const Route = createFileRoute("/admin/delivery-zones")({
 
 function AdminZones() {
   const zones = useAdminZones();
-  const { create, update } = useAdminZoneMutations();
+  const { create, update, remove } = useAdminZoneMutations();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [shortName, setShortName] = useState("");
   const [fee, setFee] = useState(15000);
+
+  const [editing, setEditing] = useState<DeliveryZoneDto | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editShort, setEditShort] = useState("");
+  const [editFee, setEditFee] = useState(0);
+  const [deleting, setDeleting] = useState<DeliveryZoneDto | null>(null);
+
+  const openEdit = (z: DeliveryZoneDto) => {
+    setEditing(z);
+    setEditName(z.name);
+    setEditShort(z.shortName);
+    setEditFee(z.baseDeliveryFee);
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    if (!editName.trim() || !editShort.trim()) {
+      toast.error("Nhập đủ tên.");
+      return;
+    }
+    if (editFee < 0) {
+      toast.error("Phí không được âm.");
+      return;
+    }
+    try {
+      await update.mutateAsync({
+        id: editing.id,
+        body: {
+          name: editName.trim(),
+          shortName: editShort.trim(),
+          baseDeliveryFee: editFee,
+        },
+      });
+      toast.success("Đã cập nhật khu vực.");
+      setEditing(null);
+    } catch (e) {
+      toast.error(apiErrorMessage(e));
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    try {
+      await remove.mutateAsync(deleting.id);
+      toast.success("Đã xóa khu vực.");
+      setDeleting(null);
+    } catch (e) {
+      toast.error(apiErrorMessage(e));
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -124,6 +185,7 @@ function AdminZones() {
                 <TableHead>Rút gọn</TableHead>
                 <TableHead>Phí giao</TableHead>
                 <TableHead>Đang bật</TableHead>
+                <TableHead className="w-24 text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -145,12 +207,84 @@ function AdminZones() {
                       }}
                     />
                   </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEdit(z)}
+                        aria-label="Sửa"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleting(z)}
+                        aria-label="Xóa"
+                      >
+                        <Trash2 className="size-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         )}
       </div>
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa khu vực</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Tên đầy đủ</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Tên rút gọn</Label>
+              <Input value={editShort} onChange={(e) => setEditShort(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Phí giao (VND)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={editFee}
+                onChange={(e) => setEditFee(Math.max(0, Number(e.target.value)))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>
+              Hủy
+            </Button>
+            <Button onClick={saveEdit} disabled={update.isPending}>
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xóa khu vực {deleting?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Không thể hoàn tác. Nếu có quán đang hỗ trợ khu vực này, thao tác sẽ bị từ chối.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={remove.isPending}>
+              Xóa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
