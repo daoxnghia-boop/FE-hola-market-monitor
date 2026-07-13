@@ -42,14 +42,9 @@ function OrdersListPage() {
             Đang tải đơn hàng...
           </div>
         )}
-        {isError && (
-          <div className="rounded-2xl bg-card p-6 text-center text-sm text-destructive shadow-card">
-            Chưa thể tải đơn hàng.
-          </div>
-        )}
-        {!isLoading && !isError && orders.length === 0 && (
+        {!isLoading && orders.length === 0 && (
           <div className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card">
-            Bạn chưa có đơn hàng nào.
+            {isError ? "Chưa có dữ liệu đơn hàng." : "Bạn chưa có đơn hàng nào."}
           </div>
         )}
         {orders.map((o) => (
