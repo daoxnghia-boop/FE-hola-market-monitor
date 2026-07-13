@@ -1,7 +1,7 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useState } from "react";
-import { Plus, Store, ArrowLeft, Pause, Play, Send, Trash2, Pencil } from "lucide-react";
+import { Plus, Store, Pause, Play, Send, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,7 +38,6 @@ function ShopOwnerHome() {
   const shops = useOwnerShops();
   const action = useOwnerShopAction();
   const remove = useDeleteOwnerShop();
-  const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState<ShopDto | null>(null);
 
   const doAction = async (id: string, act: "submit" | "pause" | "reopen") => {
