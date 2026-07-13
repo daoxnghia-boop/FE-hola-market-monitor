@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useOwnerShop, useUpdateOwnerShop } from "@/lib/api/hooks";
+import { useDeliveryZones, useOwnerShop, useUpdateOwnerShop } from "@/lib/api/hooks";
 import { useRequireAuth } from "@/lib/require-auth";
 import { apiErrorMessage } from "@/lib/api/client";
+import { formatVND } from "@/lib/domain";
+
 
 export const Route = createFileRoute("/shop-owner/shops/$shopId/edit")({
   head: () => ({ meta: [{ title: "Sửa gian hàng — HoLa Market" }] }),
@@ -38,8 +40,15 @@ function EditShopPage() {
   useRequireAuth();
   const { shopId } = Route.useParams();
   const shop = useOwnerShop(shopId);
+  const zones = useDeliveryZones();
   const update = useUpdateOwnerShop();
   const navigate = useNavigate();
+
+  // Managed separately from RHF because supportedZoneIds/deliveryFees are edited via checkbox UI.
+  const [supportedZoneIds, setSupportedZoneIds] = useState<string[]>([]);
+  const [deliveryFees, setDeliveryFees] = useState<Record<string, number>>({});
+
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
