@@ -299,16 +299,6 @@ function OrderDetailPage() {
           </div>
         </aside>
       </div>
-      {reviewTarget && (
-        <WriteProductReviewDialog
-          open={!!reviewTarget}
-          onOpenChange={(v) => !v && setReviewTarget(null)}
-          orderId={order.id}
-          productId={reviewTarget.productId}
-          productName={reviewTarget.productName}
-          onSuccess={() => setReviewTarget(null)}
-        />
-      )}
     </AppShell>
   );
 }
