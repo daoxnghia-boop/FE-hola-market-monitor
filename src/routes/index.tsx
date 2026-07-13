@@ -50,12 +50,6 @@ function HomePage() {
   const favoriteShops = favoriteQuery.data ?? [];
   const vouchers = voucherQuery.data ?? [];
 
-  const [selected, setSelected] = useState<ProductDto | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const openProduct = (p: ProductDto) => {
-    setSelected(p);
-    setSheetOpen(true);
-  };
 
   return (
     <AppShell>
