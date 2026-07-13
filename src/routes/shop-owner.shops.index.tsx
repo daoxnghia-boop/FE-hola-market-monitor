@@ -131,12 +131,12 @@ function ShopOwnerHome() {
                   </Button>
                   {s.approvalStatus === "approved" && s.operationStatus === "active" && (
                     <Button variant="outline" size="sm" onClick={() => doAction(s.id, "pause")}>
-                      <Pause className="size-4" /> Tạm nghỉ
+                      <Pause className="size-4" /> Tạm dừng nhận đơn
                     </Button>
                   )}
                   {s.approvalStatus === "approved" && s.operationStatus === "paused" && (
                     <Button variant="outline" size="sm" onClick={() => doAction(s.id, "reopen")}>
-                      <Play className="size-4" /> Mở lại
+                      <Play className="size-4" /> Hoạt động lại
                     </Button>
                   )}
                   {(s.approvalStatus === "rejected" || s.approvalStatus === "draft") && (
