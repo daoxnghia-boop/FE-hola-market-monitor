@@ -889,3 +889,324 @@ function ProductGridSkeleton({ count }: { count: number }) {
 function ReviewCardSkeleton() {
   return <Skeleton className="h-24 w-full rounded-2xl" />;
 }
+
+// -----------------------------
+// Review input panel — eligibility + form + own review card
+// -----------------------------
+function ReviewInputPanel({
+  productId,
+  preferredOrderItemId,
+}: {
+  productId: string;
+  preferredOrderItemId?: string;
+}) {
+  const currentUser = useCurrentUser();
+  const eligibilityQuery = useProductReviewEligibility(productId);
+  const createReview = useCreateProductReview();
+  const updateReview = useUpdateProductReview();
+  const deleteReview = useDeleteProductReview();
+  const [editing, setEditing] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedOrderItemId, setSelectedOrderItemId] = useState<string>("");
+
+  const eligibility = eligibilityQuery.data;
+
+  // Sync default selection when eligible items or preferred change.
+  useEffect(() => {
+    if (!eligibility || !eligibility.eligible) return;
+    const items = eligibility.eligibleOrderItems;
+    if (items.length === 0) return;
+    const preferred =
+      preferredOrderItemId &&
+      items.some((i) => i.orderItemId === preferredOrderItemId)
+        ? preferredOrderItemId
+        : undefined;
+    setSelectedOrderItemId((prev) => {
+      if (prev && items.some((i) => i.orderItemId === prev)) return prev;
+      return preferred ?? items[0].orderItemId;
+    });
+  }, [eligibility, preferredOrderItemId]);
+
+  // Scroll to #write-review target when reached via order-detail link.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.location.hash.includes("write-review")) return;
+    if (!eligibility) return;
+    const el = document.getElementById("write-review");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [eligibility]);
+
+  if (eligibilityQuery.isLoading) {
+    return (
+      <div className="mt-4">
+        <Skeleton className="h-24 w-full rounded-2xl" />
+      </div>
+    );
+  }
+  if (!eligibility) return null;
+
+  // Guest
+  if (!eligibility.authenticated) {
+    return (
+      <div
+        id="write-review"
+        className="mt-4 flex flex-col items-start gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-card sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex items-start gap-3">
+          <LogIn className="mt-0.5 size-5 text-primary" />
+          <p className="text-sm">Bạn cần đăng nhập để đánh giá món ăn.</p>
+        </div>
+        <Button
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              storeRedirectIntent(
+                window.location.pathname + window.location.search,
+              );
+            }
+          }}
+          asChild
+          className="rounded-full"
+        >
+          <Link to="/login">Đăng nhập để đánh giá</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // Already reviewed
+  if (eligibility.existingReview) {
+    const r = eligibility.existingReview;
+    return (
+      <div id="write-review" className="mt-4">
+        <ExistingReviewCard
+          review={r}
+          currentUserName={currentUser?.fullName ?? r.user.displayName}
+          editing={editing}
+          onStartEdit={() => setEditing(true)}
+          onCancelEdit={() => setEditing(false)}
+          onSaveEdit={(v) =>
+            updateReview.mutate(
+              {
+                reviewId: r.id,
+                productId,
+                orderId: r.orderId,
+                body: v,
+              },
+              {
+                onSuccess: () => {
+                  toast.success("Đã cập nhật đánh giá", { description: r.orderId });
+                  setEditing(false);
+                },
+                onError: (e) =>
+                  toast.error("Không cập nhật được đánh giá", {
+                    description: apiErrorMessage(e),
+                  }),
+              },
+            )
+          }
+          saving={updateReview.isPending}
+          onRequestDelete={() => setDeleteOpen(true)}
+        />
+        <DeleteReviewDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          disabled={deleteReview.isPending}
+          onConfirm={() =>
+            deleteReview.mutate(
+              { reviewId: r.id, productId, orderId: r.orderId },
+              {
+                onSuccess: () => {
+                  toast.success("Đã xoá đánh giá");
+                  setDeleteOpen(false);
+                },
+                onError: (e) =>
+                  toast.error("Không xoá được đánh giá", {
+                    description: apiErrorMessage(e),
+                  }),
+              },
+            )
+          }
+        />
+      </div>
+    );
+  }
+
+  // Not purchased
+  if (eligibility.reason === "not_purchased") {
+    return (
+      <div
+        id="write-review"
+        className="mt-4 flex flex-col items-start gap-2 rounded-2xl border border-dashed border-border p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex items-start gap-2">
+          <ShoppingBag className="mt-0.5 size-5 text-muted-foreground" />
+          <p>
+            Bạn chỉ có thể đánh giá món này sau khi đã đặt và hoàn thành đơn hàng.
+          </p>
+        </div>
+        <Button variant="outline" asChild className="rounded-full">
+          <Link to="/orders">Xem đơn hàng của tôi</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // Order pending / not completed
+  if (eligibility.reason === "order_not_completed") {
+    return (
+      <div
+        id="write-review"
+        className="mt-4 rounded-2xl border border-dashed border-border p-4 text-sm"
+      >
+        <p>Bạn có thể đánh giá món này sau khi đơn hàng được hoàn thành.</p>
+        {eligibility.pendingOrder && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Đơn liên quan: #{eligibility.pendingOrder.orderCode} · trạng thái{" "}
+            {eligibility.pendingOrder.status.replace(/_/g, " ")}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Eligible: show form
+  const eligibleItems: EligibleOrderOption[] = eligibility.eligibleOrderItems;
+  const submit = (values: ReviewFormValues) => {
+    const chosen =
+      eligibleItems.find((i) => i.orderItemId === selectedOrderItemId) ??
+      eligibleItems[0];
+    if (!chosen) return;
+    createReview.mutate(
+      {
+        orderId: chosen.orderId,
+        productId,
+        orderItemId: chosen.orderItemId,
+        rating: values.rating,
+        comment: values.comment,
+        imageUrls: values.imageUrls,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Cảm ơn bạn đã đánh giá!");
+          // Scroll to "Đánh giá của bạn"
+          setTimeout(() => {
+            document
+              .getElementById("write-review")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 100);
+        },
+        onError: (e) =>
+          toast.error("Không gửi được đánh giá", {
+            description: apiErrorMessage(e),
+          }),
+      },
+    );
+  };
+
+  return (
+    <div
+      id="write-review"
+      className="mt-4 rounded-2xl border border-border/70 bg-card p-4 shadow-card"
+    >
+      <h3 className="mb-3 text-sm font-bold">
+        Đánh giá của bạn về món này
+      </h3>
+      <ProductReviewForm
+        mode="create"
+        eligibleOrders={eligibleItems}
+        selectedOrderItemId={selectedOrderItemId}
+        onSelectedOrderItemChange={setSelectedOrderItemId}
+        submitting={createReview.isPending}
+        onSubmit={submit}
+      />
+    </div>
+  );
+}
+
+function ExistingReviewCard({
+  review,
+  currentUserName,
+  editing,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  saving,
+  onRequestDelete,
+}: {
+  review: ProductReviewDto;
+  currentUserName: string;
+  editing: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (v: ReviewFormValues) => void;
+  saving: boolean;
+  onRequestDelete: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-sm font-bold text-primary">Đánh giá của bạn</h3>
+        {!editing && (
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onStartEdit}
+              className="h-8"
+            >
+              <Pencil className="size-3.5" /> Chỉnh sửa
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onRequestDelete}
+              className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" /> Xoá đánh giá
+            </Button>
+          </div>
+        )}
+      </div>
+      {editing ? (
+        <ProductReviewForm
+          mode="edit"
+          initialRating={review.rating}
+          initialComment={review.comment}
+          initialImageUrls={review.imageUrls}
+          submitting={saving}
+          onSubmit={onSaveEdit}
+          onCancel={onCancelEdit}
+          submitLabel="Lưu thay đổi"
+        />
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{currentUserName}</span>
+            <RatingStars value={review.rating} />
+            <span className="text-xs text-muted-foreground">
+              {formatRelativeTime(review.updatedAt ?? review.createdAt)}
+              {review.updatedAt ? " · đã chỉnh sửa" : ""}
+            </span>
+          </div>
+          {review.comment && (
+            <p className="text-sm leading-relaxed">{review.comment}</p>
+          )}
+          {review.imageUrls && review.imageUrls.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto">
+              {review.imageUrls.map((u) => (
+                <img
+                  key={u}
+                  src={u}
+                  alt=""
+                  loading="lazy"
+                  className="size-20 shrink-0 rounded-lg object-cover"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
