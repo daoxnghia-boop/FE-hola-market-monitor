@@ -54,13 +54,6 @@ function CheckoutPage() {
         <div className="px-4 text-sm text-muted-foreground">Đang tải thông tin đơn...</div>
       </AppShell>
     );
-  if (cartQuery.isError)
-    return (
-      <AppShell>
-        <Header title="Xác nhận đặt hàng" />
-        <div className="px-4 text-sm text-destructive">Chưa thể tải thông tin đơn.</div>
-      </AppShell>
-    );
 
   if (items.length === 0 || !shop) {
     return (
