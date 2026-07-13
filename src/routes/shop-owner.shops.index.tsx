@@ -58,20 +58,17 @@ function ShopOwnerHome() {
   };
 
   return (
-    
-      <div className="px-4 py-5">
-        <div className="mb-4 flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/account" })}>
-            <ArrowLeft className="size-5" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-xl font-extrabold">Gian hàng của tôi</h1>
-            <p className="text-xs text-muted-foreground">Quản lý các quán bạn đã đăng ký trên HoLa Market</p>
-          </div>
-          <Button asChild size="sm" className="rounded-full">
-            <Link to="/shop-owner/shops/new"><Plus className="size-4" /> Thêm</Link>
-          </Button>
+    <>
+      <div className="mb-4 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl font-extrabold">Gian hàng của tôi</h1>
+          <p className="text-xs text-muted-foreground">Quản lý các quán bạn đã đăng ký trên HoLa Market</p>
         </div>
+        <Button asChild size="sm" className="rounded-full">
+          <Link to="/shop-owner/shops/new"><Plus className="size-4" /> Thêm</Link>
+        </Button>
+      </div>
+
 
         {shops.isLoading ? (
           <div className="space-y-3">
