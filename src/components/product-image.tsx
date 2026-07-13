@@ -34,12 +34,7 @@ export function ProductImage({
 
   return (
     <div
-      className={cn(
-        "relative overflow-hidden bg-muted",
-        ASPECT_CLASS[aspect],
-        rounded,
-        className,
-      )}
+      className={cn("relative overflow-hidden bg-muted", ASPECT_CLASS[aspect], rounded, className)}
     >
       {showFallback ? (
         <div className="grid size-full place-items-center text-muted-foreground">

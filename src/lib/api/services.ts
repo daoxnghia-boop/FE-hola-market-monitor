@@ -269,8 +269,25 @@ export const shopOwnerApi = {
   orders: (query: Record<string, unknown> = {}) =>
     apiRequest<Paginated<OrderSummaryDto>>("/shop-owner/orders", { query }),
   order: (id: string) => apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}`),
-  advanceOrder: (id: string) =>
-    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/advance`, { method: "POST", body: {} }),
+  confirmOrder: (id: string) =>
+    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/confirm`, { method: "POST", body: {} }),
+  rejectOrder: (id: string, reason: string) =>
+    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/reject`, {
+      method: "POST",
+      body: { reason },
+    }),
+  startPreparingOrder: (id: string) =>
+    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/start-preparing`, {
+      method: "POST",
+      body: {},
+    }),
+  startDeliveryOrder: (id: string) =>
+    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/start-delivery`, {
+      method: "POST",
+      body: {},
+    }),
+  completeOrder: (id: string) =>
+    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/complete`, { method: "POST", body: {} }),
   cancelOrder: (id: string, reason: string) =>
     apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/cancel`, {
       method: "POST",

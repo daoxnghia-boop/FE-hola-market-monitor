@@ -756,8 +756,24 @@ export function useOwnerOrderMutations() {
     client.invalidateQueries({ queryKey: ["order"] });
   };
   return {
-    advance: useMutation({
-      mutationFn: (id: string) => shopOwnerApi.advanceOrder(id),
+    confirm: useMutation({
+      mutationFn: (id: string) => shopOwnerApi.confirmOrder(id),
+      onSuccess: invalidate,
+    }),
+    reject: useMutation({
+      mutationFn: (v: { id: string; reason: string }) => shopOwnerApi.rejectOrder(v.id, v.reason),
+      onSuccess: invalidate,
+    }),
+    startPreparing: useMutation({
+      mutationFn: (id: string) => shopOwnerApi.startPreparingOrder(id),
+      onSuccess: invalidate,
+    }),
+    startDelivery: useMutation({
+      mutationFn: (id: string) => shopOwnerApi.startDeliveryOrder(id),
+      onSuccess: invalidate,
+    }),
+    complete: useMutation({
+      mutationFn: (id: string) => shopOwnerApi.completeOrder(id),
       onSuccess: invalidate,
     }),
     cancel: useMutation({

@@ -50,7 +50,6 @@ function HomePage() {
   const favoriteShops = favoriteQuery.data ?? [];
   const vouchers = voucherQuery.data ?? [];
 
-
   return (
     <AppShell>
       <section className="bg-gradient-to-br from-primary to-primary/80 px-4 pb-5 pt-4 text-primary-foreground md:rounded-b-3xl md:px-6 md:pb-8 md:pt-8">
@@ -147,10 +146,7 @@ function HomePage() {
             {frequentQuery.isLoading ? (
               <p className="text-sm text-muted-foreground">Đang tải gợi ý...</p>
             ) : (
-              frequentProducts.map((p) => (
-                <ProductCard key={p.id} product={p} />
-
-              ))
+              frequentProducts.map((p) => <ProductCard key={p.id} product={p} />)
             )}
           </div>
         </section>

@@ -16,7 +16,6 @@ export function getShopDeliveryFee(
   return typeof override === "number" ? override : zone.baseDeliveryFee;
 }
 
-
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   da_dat: "Đã đặt",
   cho_quan_xac_nhan: "Chờ quán xác nhận",

@@ -1,5 +1,47 @@
 # Changelog
 
+## feat(shop-owner-orders): explicit confirm/reject flow + shop status audit
+
+### Added
+- Explicit shop-owner order transition endpoints replacing the generic
+  `/advance`:
+  - `POST /shop-owner/orders/:id/confirm` — `cho_quan_xac_nhan → quan_da_xac_nhan`
+  - `POST /shop-owner/orders/:id/reject` — `cho_quan_xac_nhan → da_huy`,
+    requires `{ reason }` and writes `cancellation` metadata.
+  - `POST /shop-owner/orders/:id/start-preparing` — `quan_da_xac_nhan → dang_chuan_bi`
+  - `POST /shop-owner/orders/:id/start-delivery` — `dang_chuan_bi → dang_giao`
+  - `POST /shop-owner/orders/:id/complete` — `dang_giao → hoan_thanh`
+  - Each enforces valid current status via `INVALID_STATUS` conflict,
+    appends to `statusHistory`, and emits a customer notification with a
+    localized title/body.
+- `shopOwnerApi.confirmOrder / rejectOrder / startPreparingOrder /
+  startDeliveryOrder / completeOrder` service methods.
+- `useOwnerOrderMutations()` now exposes `confirm`, `reject`,
+  `startPreparing`, `startDelivery`, `complete`, `cancel` (existing
+  `advance` removed). All invalidate `owner/orders`, `owner/order`,
+  `owner/stats`, `orders`, `order`.
+- Shop-owner dashboard: new "Đơn mới chờ xác nhận" section listing all
+  `cho_quan_xac_nhan` orders with inline `Xác nhận đơn` / `Từ chối`
+  actions. Reject uses a Radix Dialog with required reason (no
+  `window.confirm`).
+
+### Changed
+- Shop-owner order-detail page: replaced the single "Chuyển sang: …"
+  button with the correct action per status
+  (`Xác nhận đơn`+`Từ chối` → `Bắt đầu chuẩn bị` → `Bắt đầu giao` →
+  `Hoàn thành đơn`). "Hủy đơn" is only shown after confirmation.
+- Reversed shop `operationStatus` labels/actions audited across surfaces.
+  Canonical mapping now used everywhere:
+  - `active` → badge "Đang hoạt động", action "Tạm dừng nhận đơn"
+  - `paused` → badge "Tạm dừng nhận đơn", action "Hoạt động lại"
+  - `suspended` → badge "Bị Admin tạm khóa"
+  Updated `src/routes/shop-owner.shops.index.tsx`,
+  `src/routes/admin.shops.tsx` (badge tone now distinguishes
+  paused/suspended), and `src/routes/account.tsx` (raw enum strings
+  replaced with labels).
+
+
+
 ## feat(product-reviews): add customer review submission and management
 
 ### Added

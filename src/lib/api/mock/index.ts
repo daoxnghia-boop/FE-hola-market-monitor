@@ -46,6 +46,16 @@ import {
 
 type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
+const ORDER_STATUS_TEXT: Record<OrderStatus, string> = {
+  da_dat: "Đã đặt",
+  cho_quan_xac_nhan: "Chờ quán xác nhận",
+  quan_da_xac_nhan: "Quán đã xác nhận",
+  dang_chuan_bi: "Đang chuẩn bị",
+  dang_giao: "Đang giao",
+  hoan_thanh: "Hoàn thành",
+  da_huy: "Đã hủy",
+};
+
 const STORAGE_KEY = "hola-mock-state-v7";
 
 type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
@@ -1494,39 +1504,96 @@ async function route(ctx: Ctx): Promise<unknown> {
     requireShopOwnership(o!.shopId);
     return ok(o);
   }
-  const ownerAdvance = path.match(/^\/shop-owner\/orders\/([^/]+)\/advance$/);
-  if (ownerAdvance && method === "POST") {
-    const o = state.orders.find((x) => x.id === ownerAdvance[1]);
+  const ownerTransition = path.match(
+    /^\/shop-owner\/orders\/([^/]+)\/(confirm|start-preparing|start-delivery|complete)$/,
+  );
+  if (ownerTransition && method === "POST") {
+    const o = state.orders.find((x) => x.id === ownerTransition[1]);
     if (!o) notFound();
     requireShopOwnership(o!.shopId);
-    const flow: OrderStatus[] = [
-      "cho_quan_xac_nhan",
-      "quan_da_xac_nhan",
-      "dang_chuan_bi",
-      "dang_giao",
-      "hoan_thanh",
-    ];
-    const idx = flow.indexOf(o!.status);
-    if (o!.status === "hoan_thanh" || o!.status === "da_huy")
-      conflict("ORDER_LOCKED", "Đơn đã kết thúc, không thể cập nhật.");
-    const next =
-      idx >= 0 && idx < flow.length - 1
-        ? flow[idx + 1]
-        : o!.status === "da_dat"
-          ? "cho_quan_xac_nhan"
-          : o!.status;
+    const action = ownerTransition[2] as
+      | "confirm"
+      | "start-preparing"
+      | "start-delivery"
+      | "complete";
+    const transitions: Record<string, { from: OrderStatus; to: OrderStatus; title: string }> = {
+      confirm: {
+        from: "cho_quan_xac_nhan",
+        to: "quan_da_xac_nhan",
+        title: "Quán đã xác nhận đơn",
+      },
+      "start-preparing": {
+        from: "quan_da_xac_nhan",
+        to: "dang_chuan_bi",
+        title: "Quán đang chuẩn bị món",
+      },
+      "start-delivery": {
+        from: "dang_chuan_bi",
+        to: "dang_giao",
+        title: "Đơn đang được giao",
+      },
+      complete: {
+        from: "dang_giao",
+        to: "hoan_thanh",
+        title: "Đơn đã hoàn thành",
+      },
+    };
+    const t = transitions[action];
+    if (o!.status !== t.from)
+      conflict(
+        "INVALID_STATUS",
+        `Chỉ được thực hiện khi đơn ở trạng thái "${ORDER_STATUS_TEXT[t.from]}".`,
+      );
     const now = new Date().toISOString();
-    o!.status = next;
-    o!.canCancel = next === "cho_quan_xac_nhan" || next === "quan_da_xac_nhan";
-    o!.canReview = next === "hoan_thanh";
-    o!.statusHistory = [...o!.statusHistory, { status: next, occurredAt: now }];
+    o!.status = t.to;
+    o!.canCancel = t.to === "quan_da_xac_nhan";
+    o!.canReview = t.to === "hoan_thanh";
+    o!.statusHistory = [...o!.statusHistory, { status: t.to, occurredAt: now }];
     if (o!.customerId) {
       state.notifications = [
         {
-          id: `n-so-${o!.id}-${next}`,
+          id: `n-so-${o!.id}-${t.to}`,
           type: "order",
-          title: "Cập nhật đơn hàng",
-          body: `Đơn ${o!.displayCode} đã chuyển sang ${next}.`,
+          title: t.title,
+          body: `Đơn ${o!.displayCode}: ${ORDER_STATUS_TEXT[t.to]}.`,
+          createdAt: now,
+          readAt: null,
+          target: { type: "order", id: o!.id },
+          userId: o!.customerId,
+        },
+        ...state.notifications,
+      ];
+    }
+    save();
+    return ok(o);
+  }
+
+  const ownerReject = path.match(/^\/shop-owner\/orders\/([^/]+)\/reject$/);
+  if (ownerReject && method === "POST") {
+    const o = state.orders.find((x) => x.id === ownerReject[1]);
+    if (!o) notFound();
+    const { user } = requireShopOwnership(o!.shopId);
+    const b = (body ?? {}) as { reason?: string };
+    if (!b.reason?.trim()) badRequest("REASON_REQUIRED", "Vui lòng nhập lý do từ chối.");
+    if (o!.status !== "cho_quan_xac_nhan")
+      conflict("INVALID_STATUS", "Chỉ được từ chối đơn đang chờ xác nhận.");
+    const now = new Date().toISOString();
+    o!.status = "da_huy";
+    o!.canCancel = false;
+    o!.canReview = false;
+    o!.cancellation = {
+      reason: b.reason,
+      canceledAt: now,
+      canceledBy: `shop:${user.fullName}`,
+    };
+    o!.statusHistory = [...o!.statusHistory, { status: "da_huy", occurredAt: now, note: b.reason }];
+    if (o!.customerId) {
+      state.notifications = [
+        {
+          id: `n-sor-${o!.id}`,
+          type: "order",
+          title: "Quán đã từ chối đơn",
+          body: `Đơn ${o!.displayCode} bị từ chối. Lý do: ${b.reason}`,
           createdAt: now,
           readAt: null,
           target: { type: "order", id: o!.id },

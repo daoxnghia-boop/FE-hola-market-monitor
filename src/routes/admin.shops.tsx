@@ -64,9 +64,14 @@ const APPROVAL_LABEL: Record<string, string> = {
   draft: "Nháp",
 };
 const OPERATION_LABEL: Record<string, string> = {
-  active: "Hoạt động",
-  suspended: "Tạm ngưng",
-  paused: "Tạm nghỉ",
+  active: "Đang hoạt động",
+  paused: "Tạm dừng nhận đơn",
+  suspended: "Bị Admin tạm khóa",
+};
+const OPERATION_TONE: Record<string, "outline" | "secondary" | "destructive"> = {
+  active: "outline",
+  paused: "secondary",
+  suspended: "destructive",
 };
 
 function AdminShops() {
@@ -141,7 +146,6 @@ function AdminShops() {
     setConfirm(null);
   };
 
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -188,7 +192,9 @@ function AdminShops() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="px-4 pt-2"><InlineFetchingBar show={shops.isFetching && !shops.isLoading} /></div>
+        <div className="px-4 pt-2">
+          <InlineFetchingBar show={shops.isFetching && !shops.isLoading} />
+        </div>
         {shops.isLoading ? (
           <div className="space-y-2 p-4">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -243,7 +249,7 @@ function AdminShops() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={s.operationStatus === "active" ? "outline" : "destructive"}>
+                      <Badge variant={OPERATION_TONE[s.operationStatus ?? "active"]}>
                         {OPERATION_LABEL[s.operationStatus ?? "active"]}
                       </Badge>
                     </TableCell>
