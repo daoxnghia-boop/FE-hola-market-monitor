@@ -113,23 +113,26 @@ function HomePage() {
         />
       </section>
 
-      <section className="mt-6 px-4">
-        <SectionHeader
-          icon={<Sparkles className="size-4" />}
-          title="Ưu đãi cho bạn"
-          to="/vouchers"
-        />
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {voucherQuery.isLoading && (
-            <p className="text-sm text-muted-foreground">Đang tải ưu đãi...</p>
-          )}
-          {vouchers.map((v) => (
-            <div key={v.id} className="w-[280px] shrink-0">
-              <VoucherCard voucher={v} compact />
-            </div>
-          ))}
-        </div>
-      </section>
+      {(voucherQuery.isLoading || vouchers.length > 0) && (
+        <section className="mt-6 px-4">
+          <SectionHeader
+            icon={<Sparkles className="size-4" />}
+            title="Ưu đãi cho bạn"
+            to="/vouchers"
+          />
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {voucherQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Đang tải ưu đãi...</p>
+            ) : (
+              vouchers.map((v) => (
+                <div key={v.id} className="w-[280px] shrink-0">
+                  <VoucherCard voucher={v} compact />
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="mt-8 px-4">
         <SectionHeader icon={<MapPin className="size-4" />} title="Quán gần bạn" to="/search" />
