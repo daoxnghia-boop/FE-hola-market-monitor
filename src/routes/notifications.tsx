@@ -91,7 +91,7 @@ function NotificationsPage() {
       {state.isLoading ? (
         <div className="px-4 pt-6 text-sm text-muted-foreground">Đang tải thông báo...</div>
       ) : state.isError ? (
-        <div className="px-4 pt-6 text-sm text-destructive">Chưa thể tải thông báo.</div>
+        <div className="px-4 pt-6 text-sm text-muted-foreground">Chưa có thông báo.</div>
       ) : list.length === 0 ? (
         <div className="px-4 pt-6">
           <EmptyState

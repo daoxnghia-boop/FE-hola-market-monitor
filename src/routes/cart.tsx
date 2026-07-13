@@ -48,13 +48,6 @@ function CartPage() {
         <div className="px-4 text-sm text-muted-foreground">Đang tải giỏ hàng...</div>
       </AppShell>
     );
-  if (cartQuery.isError)
-    return (
-      <AppShell>
-        <PageHeader title="Giỏ hàng" />
-        <div className="px-4 text-sm text-destructive">Chưa thể tải giỏ hàng.</div>
-      </AppShell>
-    );
 
   if (items.length === 0 || !shop) {
     return (

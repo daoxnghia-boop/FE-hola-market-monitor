@@ -22,14 +22,13 @@ function VouchersPage() {
       </div>
       <div className="grid gap-3 px-4 pb-24 sm:grid-cols-2">
         {isLoading && <p className="text-sm text-muted-foreground">Đang tải ưu đãi...</p>}
-        {isError && (
-          <p className="text-sm text-destructive">Chưa thể tải ưu đãi. Vui lòng thử lại sau.</p>
-        )}
-        {!isLoading && !isError && vouchers.length === 0 && (
+        {!isLoading && vouchers.length === 0 && (
           <EmptyState
             icon={<Ticket className="size-6" />}
             title="Chưa có ưu đãi"
-            description="Voucher mới sẽ xuất hiện tại đây."
+            description={
+              isError ? "Hiện chưa có dữ liệu ưu đãi." : "Voucher mới sẽ xuất hiện tại đây."
+            }
           />
         )}
         {vouchers.map((v) => (

@@ -116,15 +116,15 @@ function SearchPage() {
 
         {isLoading ? (
           <p className="py-8 text-center text-sm text-muted-foreground">Đang tìm món và quán...</p>
-        ) : isError ? (
-          <p className="py-8 text-center text-sm text-destructive">
-            Chưa thể tải kết quả tìm kiếm.
-          </p>
-        ) : isEmpty ? (
+        ) : isError || isEmpty ? (
           <EmptyState
             icon={<SearchIcon className="size-6" />}
-            title="Không tìm thấy kết quả"
-            description={`Không có món/quán nào khớp với "${q}". Thử từ khoá khác nhé!`}
+            title={ql ? "Không tìm thấy kết quả" : "Chưa có dữ liệu"}
+            description={
+              ql
+                ? `Không có món/quán nào khớp với "${q}". Thử từ khoá khác nhé!`
+                : "Hiện chưa có gợi ý. Hãy thử tìm theo tên món hoặc quán."
+            }
           />
         ) : (
           <>

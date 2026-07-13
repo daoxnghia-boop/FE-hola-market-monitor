@@ -113,53 +113,56 @@ function HomePage() {
         />
       </section>
 
-      <section className="mt-6 px-4">
-        <SectionHeader
-          icon={<Sparkles className="size-4" />}
-          title="Ưu đãi cho bạn"
-          to="/vouchers"
-        />
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {voucherQuery.isLoading && (
-            <p className="text-sm text-muted-foreground">Đang tải ưu đãi...</p>
-          )}
-          {vouchers.map((v) => (
-            <div key={v.id} className="w-[280px] shrink-0">
-              <VoucherCard voucher={v} compact />
-            </div>
-          ))}
-        </div>
-      </section>
+      {(voucherQuery.isLoading || vouchers.length > 0) && (
+        <section className="mt-6 px-4">
+          <SectionHeader
+            icon={<Sparkles className="size-4" />}
+            title="Ưu đãi cho bạn"
+            to="/vouchers"
+          />
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {voucherQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Đang tải ưu đãi...</p>
+            ) : (
+              vouchers.map((v) => (
+                <div key={v.id} className="w-[280px] shrink-0">
+                  <VoucherCard voucher={v} compact />
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="mt-8 px-4">
         <SectionHeader icon={<MapPin className="size-4" />} title="Quán gần bạn" to="/search" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {nearbyQuery.isLoading && (
+          {nearbyQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Đang tải quán gần bạn...</p>
+          ) : nearby.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Hiện chưa có quán quanh bạn.</p>
+          ) : (
+            nearby.map((s) => (
+              <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
+            ))
           )}
-          {nearbyQuery.isError && (
-            <p className="text-sm text-destructive">Chưa thể tải danh sách quán.</p>
-          )}
-          {!nearbyQuery.isLoading && !nearbyQuery.isError && nearby.length === 0 && (
-            <p className="text-sm text-muted-foreground">Chưa có quán giao tới khu này.</p>
-          )}
-          {nearby.map((s) => (
-            <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
-          ))}
         </div>
       </section>
 
-      <section className="mt-8 px-4">
-        <SectionHeader icon={<Repeat className="size-4" />} title="Món bạn hay đặt" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {frequentQuery.isLoading && (
-            <p className="text-sm text-muted-foreground">Đang tải gợi ý...</p>
-          )}
-          {frequentProducts.map((p) => (
-            <ProductCard key={p.id} product={p} onSelect={openProduct} />
-          ))}
-        </div>
-      </section>
+      {(frequentQuery.isLoading || frequentProducts.length > 0) && (
+        <section className="mt-8 px-4">
+          <SectionHeader icon={<Repeat className="size-4" />} title="Món bạn hay đặt" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {frequentQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Đang tải gợi ý...</p>
+            ) : (
+              frequentProducts.map((p) => (
+                <ProductCard key={p.id} product={p} onSelect={openProduct} />
+              ))
+            )}
+          </div>
+        </section>
+      )}
 
       {favoriteShops.length > 0 && (
         <section className="mt-8 px-4">
@@ -179,30 +182,28 @@ function HomePage() {
           to="/search"
         />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {popularQuery.isLoading && (
+          {popularQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Đang tải món phổ biến...</p>
+          ) : popular.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Hiện chưa có món phổ biến.</p>
+          ) : (
+            popular.map((p) => <ProductCard key={p.id} product={p} onSelect={openProduct} />)
           )}
-          {popularQuery.isError && (
-            <p className="text-sm text-destructive">Chưa thể tải món phổ biến.</p>
-          )}
-          {!popularQuery.isLoading && !popularQuery.isError && popular.length === 0 && (
-            <p className="text-sm text-muted-foreground">Chưa có món phổ biến.</p>
-          )}
-          {popular.map((p) => (
-            <ProductCard key={p.id} product={p} onSelect={openProduct} />
-          ))}
         </div>
       </section>
 
       <section className="mt-8 px-4 pb-32 md:pb-12">
         <SectionHeader title="Quán mới nổi" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {newShopsQuery.isLoading && (
+          {newShopsQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Đang tải quán mới...</p>
+          ) : newShops.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Chưa có quán mới.</p>
+          ) : (
+            newShops.map((s) => (
+              <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
+            ))
           )}
-          {newShops.map((s) => (
-            <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
-          ))}
         </div>
       </section>
 
