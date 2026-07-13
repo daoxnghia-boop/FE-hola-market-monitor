@@ -1,4 +1,21 @@
-import type { OrderStatus, VoucherStatus } from "./api/types";
+import type { DeliveryZoneDto, OrderStatus, ShopDto, VoucherStatus } from "./api/types";
+
+/**
+ * Phí giao hàng theo từng quán tại một khu vực.
+ * - Nếu quán khai riêng `deliveryFees[zoneId]` thì dùng giá đó.
+ * - Nếu không có thì fallback về `zone.baseDeliveryFee`.
+ * - Trả `null` khi quán chưa hỗ trợ khu này (dùng để hiển thị "Chưa giao").
+ */
+export function getShopDeliveryFee(
+  shop: Pick<ShopDto, "supportedZoneIds" | "deliveryFees"> | null | undefined,
+  zone: Pick<DeliveryZoneDto, "id" | "baseDeliveryFee"> | null | undefined,
+): number | null {
+  if (!shop || !zone) return null;
+  if (!shop.supportedZoneIds.includes(zone.id)) return null;
+  const override = shop.deliveryFees?.[zone.id];
+  return typeof override === "number" ? override : zone.baseDeliveryFee;
+}
+
 
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   da_dat: "Đã đặt",

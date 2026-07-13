@@ -56,7 +56,11 @@ export type ShopDto = {
   orderCount?: number;
   rejectionReason?: string;
   submittedAt?: string;
+  /** Per-zone delivery fee override. If a supportedZoneId is missing here,
+   *  fallback to DeliveryZoneDto.baseDeliveryFee. */
+  deliveryFees?: Record<string, number>;
 };
+
 
 export type ShopRegistrationInput = {
   name: string;
@@ -73,6 +77,7 @@ export type ShopRegistrationInput = {
   prepTimeMinutes: number;
   categoryIds: string[];
   supportedZoneIds: string[];
+  deliveryFees?: Record<string, number>;
   acceptedTerms: boolean;
 };
 

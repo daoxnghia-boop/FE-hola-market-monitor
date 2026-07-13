@@ -37,7 +37,7 @@ import {
 
 type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
-const STORAGE_KEY = "hola-mock-state-v4";
+const STORAGE_KEY = "hola-mock-state-v5";
 
 type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
 
@@ -196,16 +196,45 @@ function isValidVNPhone(p: string): boolean {
   return /^0\d{9}$/.test(p);
 }
 
+function shopDeliveryFee(shop: ShopDto, zone: DeliveryZoneDto | null | undefined): number | null {
+  if (!zone) return null;
+  if (!shop.supportedZoneIds.includes(zone.id)) return null;
+  const override = shop.deliveryFees?.[zone.id];
+  return typeof override === "number" ? override : zone.baseDeliveryFee;
+}
+
+/**
+ * Only keeps fees for currently supported zones, clamps to non-negative integers.
+ * Zones without an explicit fee will fall back to zone.baseDeliveryFee at read time.
+ */
+function sanitizeDeliveryFees(
+  fees: Record<string, number> | undefined,
+  supportedZoneIds: string[],
+): Record<string, number> | undefined {
+  if (!fees) return undefined;
+  const out: Record<string, number> = {};
+  for (const id of supportedZoneIds) {
+    const raw = fees[id];
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      out[id] = Math.max(0, Math.floor(raw));
+    }
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+
+
 function decorateShop(s: ShopDto, zoneId?: string): ShopDto {
   const isFav = state.favoriteShopIds.includes(s.id);
-  const zone = zoneId ? state.zones.find((z) => z.id === zoneId) : null;
-  const supported = zone ? s.supportedZoneIds.includes(zone.id) : true;
+  const zone = zoneId ? (state.zones.find((z) => z.id === zoneId) ?? null) : null;
+  const fee = shopDeliveryFee(s, zone);
   return {
     ...s,
     isFavorite: isFav,
-    delivery: zone ? { supported, fee: supported ? zone.baseDeliveryFee : null } : s.delivery,
+    delivery: zone ? { supported: fee !== null, fee } : s.delivery,
   };
 }
+
 
 function paginate<T>(list: T[], pageSize?: string) {
   const size = pageSize ? Number(pageSize) : list.length;
@@ -215,9 +244,13 @@ function paginate<T>(list: T[], pageSize?: string) {
 function recomputeCart(cart: CartDto): CartDto {
   const subtotal = cart.items.reduce((n, it) => n + it.lineTotal, 0);
   const zone = cart.deliveryZone;
-  const deliveryFee = zone ? zone.baseDeliveryFee : 0;
+  const shop = cart.shop;
+  // Delivery fee is per-shop-per-zone. Fallback to zone base when quán chưa khai riêng.
+  const perShopFee = shop && zone ? shopDeliveryFee(shop, zone) : null;
+  const deliveryFee = perShopFee ?? (zone && !shop ? zone.baseDeliveryFee : 0);
   let discount = 0;
   const reasons: string[] = [];
+
   if (cart.voucher) {
     const v = cart.voucher;
     if (subtotal < v.minOrderAmount) {
@@ -821,6 +854,7 @@ async function route(ctx: Ctx): Promise<unknown> {
         prepTimeMinutes: number;
         categoryIds: string[];
         supportedZoneIds: string[];
+        deliveryFees?: Record<string, number>;
         acceptedTerms: boolean;
       };
       if (!b?.acceptedTerms) badRequest("TERMS_REQUIRED", "Bạn cần đồng ý điều khoản.");
@@ -874,6 +908,7 @@ async function route(ctx: Ctx): Promise<unknown> {
         createdAt: now,
         submittedAt: now,
         orderCount: 0,
+        deliveryFees: sanitizeDeliveryFees(b.deliveryFees, b.supportedZoneIds),
       };
       state.shops = [shop, ...state.shops];
       // Promote user to shop_owner on first registration
@@ -900,6 +935,8 @@ async function route(ctx: Ctx): Promise<unknown> {
         delete (b as Record<string, unknown>).reviewCount;
         delete (b as Record<string, unknown>).orderCount;
         Object.assign(shop, b);
+        // Ensure delivery fees are trimmed to currently-supported zones.
+        shop.deliveryFees = sanitizeDeliveryFees(shop.deliveryFees, shop.supportedZoneIds);
         save();
         return ok(shop);
       }

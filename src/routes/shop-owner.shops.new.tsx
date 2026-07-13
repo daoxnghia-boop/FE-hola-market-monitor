@@ -35,6 +35,7 @@ const schema = z.object({
   prepTimeMinutes: z.coerce.number().int().min(1, "Phải > 0").max(180, "Tối đa 180 phút"),
   categoryIds: z.array(z.string()).min(1, "Chọn ít nhất 1 danh mục"),
   supportedZoneIds: z.array(z.string()).min(1, "Chọn ít nhất 1 khu vực giao"),
+  deliveryFees: z.record(z.string(), z.coerce.number().int().min(0, "Phí không được âm")),
   acceptedTerms: z.boolean().refine((v) => v === true, "Bạn cần đồng ý điều khoản"),
 });
 
@@ -65,6 +66,7 @@ function NewShopPage() {
       prepTimeMinutes: 15,
       categoryIds: [],
       supportedZoneIds: [],
+      deliveryFees: {},
       acceptedTerms: false,
     },
   });
@@ -78,11 +80,18 @@ function NewShopPage() {
 
   const categoryIds = watch("categoryIds");
   const supportedZoneIds = watch("supportedZoneIds");
+  const deliveryFees = watch("deliveryFees") ?? {};
   const acceptedTerms = watch("acceptedTerms");
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const shop = await create.mutateAsync({ ...values, acceptedTerms: true });
+      // Chỉ giữ phí giao của các khu đang hỗ trợ.
+      const fees: Record<string, number> = {};
+      for (const id of values.supportedZoneIds) {
+        const f = values.deliveryFees[id];
+        if (typeof f === "number") fees[id] = f;
+      }
+      const shop = await create.mutateAsync({ ...values, deliveryFees: fees, acceptedTerms: true });
       toast.success("Đã gửi hồ sơ. Chúng tôi sẽ duyệt trong 1-2 ngày làm việc.");
       navigate({ to: "/shop-owner", search: {} as never, params: {} as never, replace: true });
       void shop;
@@ -91,12 +100,24 @@ function NewShopPage() {
     }
   };
 
-  const toggle = (field: "categoryIds" | "supportedZoneIds", id: string) => {
+  const toggleZone = (zoneId: string, baseFee: number) => {
+    const cur = form.getValues("supportedZoneIds");
+    const isOn = cur.includes(zoneId);
+    const next = isOn ? cur.filter((x) => x !== zoneId) : [...cur, zoneId];
+    setValue("supportedZoneIds", next, { shouldValidate: true });
+    const nextFees = { ...form.getValues("deliveryFees") };
+    if (isOn) delete nextFees[zoneId];
+    else if (nextFees[zoneId] === undefined) nextFees[zoneId] = baseFee;
+    setValue("deliveryFees", nextFees, { shouldValidate: true });
+  };
+
+  const toggle = (field: "categoryIds", id: string) => {
     const cur = form.getValues(field) as string[];
     setValue(field, cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id], {
       shouldValidate: true,
     });
   };
+
 
   return (
     <div className="px-4 py-5">
@@ -189,7 +210,7 @@ function NewShopPage() {
           )}
         </Section>
 
-        <Section title="Khu vực giao hàng">
+        <Section title="Khu vực giao hàng & phí giao">
           {zones.isLoading ? (
             <Skeleton className="h-10" />
           ) : (
@@ -200,7 +221,7 @@ function NewShopPage() {
                   <button
                     type="button"
                     key={z.id}
-                    onClick={() => toggle("supportedZoneIds", z.id)}
+                    onClick={() => toggleZone(z.id, z.baseDeliveryFee)}
                     className={`rounded-full border px-3 py-1.5 text-sm ${on ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"}`}
                   >
                     {z.name}
@@ -212,11 +233,45 @@ function NewShopPage() {
           {errors.supportedZoneIds && (
             <p className="text-xs text-destructive">{errors.supportedZoneIds.message}</p>
           )}
-          <p className="text-xs text-muted-foreground">
-            Bạn sẽ cấu hình phí giao riêng cho từng khu vực trong màn Phí giao hàng của quán (sắp
-            có).
-          </p>
+
+          {supportedZoneIds.length > 0 && (
+            <div className="space-y-2 rounded-xl border border-border bg-background/50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Phí giao riêng của quán (VND)
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Mặc định lấy theo mức chuẩn của khu vực. Bạn có thể đặt phí riêng cho từng khu.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {zones.data
+                  ?.filter((z) => supportedZoneIds.includes(z.id))
+                  .map((z) => (
+                    <label key={z.id} className="flex items-center gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate">{z.name}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1000}
+                        className="h-9 w-28"
+                        value={deliveryFees[z.id] ?? z.baseDeliveryFee}
+                        onChange={(e) =>
+                          setValue(
+                            "deliveryFees",
+                            {
+                              ...form.getValues("deliveryFees"),
+                              [z.id]: Math.max(0, Number(e.target.value) || 0),
+                            },
+                            { shouldValidate: true },
+                          )
+                        }
+                      />
+                    </label>
+                  ))}
+              </div>
+            </div>
+          )}
         </Section>
+
 
         <label className="flex items-start gap-3 rounded-2xl bg-card p-4 shadow-card">
           <Checkbox
