@@ -37,7 +37,7 @@ import {
 
 type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
-const STORAGE_KEY = "hola-mock-state-v4";
+const STORAGE_KEY = "hola-mock-state-v5";
 
 type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
 
@@ -196,16 +196,24 @@ function isValidVNPhone(p: string): boolean {
   return /^0\d{9}$/.test(p);
 }
 
+function shopDeliveryFee(shop: ShopDto, zone: DeliveryZoneDto | null | undefined): number | null {
+  if (!zone) return null;
+  if (!shop.supportedZoneIds.includes(zone.id)) return null;
+  const override = shop.deliveryFees?.[zone.id];
+  return typeof override === "number" ? override : zone.baseDeliveryFee;
+}
+
 function decorateShop(s: ShopDto, zoneId?: string): ShopDto {
   const isFav = state.favoriteShopIds.includes(s.id);
-  const zone = zoneId ? state.zones.find((z) => z.id === zoneId) : null;
-  const supported = zone ? s.supportedZoneIds.includes(zone.id) : true;
+  const zone = zoneId ? (state.zones.find((z) => z.id === zoneId) ?? null) : null;
+  const fee = shopDeliveryFee(s, zone);
   return {
     ...s,
     isFavorite: isFav,
-    delivery: zone ? { supported, fee: supported ? zone.baseDeliveryFee : null } : s.delivery,
+    delivery: zone ? { supported: fee !== null, fee } : s.delivery,
   };
 }
+
 
 function paginate<T>(list: T[], pageSize?: string) {
   const size = pageSize ? Number(pageSize) : list.length;
