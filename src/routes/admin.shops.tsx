@@ -252,6 +252,9 @@ function AdminShops() {
                               Xem chi tiết
                             </Link>
                           </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => openEdit(s)}>
+                            Sửa thông tin
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {s.approvalStatus !== "approved" && (
                             <DropdownMenuItem
