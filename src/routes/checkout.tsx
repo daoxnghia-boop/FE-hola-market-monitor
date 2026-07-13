@@ -1,3 +1,4 @@
+import { useRequireAuth } from "@/lib/require-auth";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Bike, MapPin, Phone, ShoppingBag, User, Wallet } from "lucide-react";
