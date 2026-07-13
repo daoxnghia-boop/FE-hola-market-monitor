@@ -405,6 +405,18 @@ export function useAdminShopAction() {
     },
   });
 }
+export function useAdminUpdateShop() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; body: Partial<import("./types").ShopDto> }) =>
+      adminApi.updateShop(v.id, v.body),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ["admin", "shops"] });
+      client.invalidateQueries({ queryKey: ["admin", "shop"] });
+      client.invalidateQueries({ queryKey: ["shops"] });
+    },
+  });
+}
 export function useAdminOrders(params: Record<string, unknown> = {}) {
   return useQuery({
     queryKey: queryKeys.admin.orders(params),
