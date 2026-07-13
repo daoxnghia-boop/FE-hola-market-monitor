@@ -129,9 +129,13 @@ function AdminCategories() {
                       onCheckedChange={async (v) => {
                         try {
                           await update.mutateAsync({ id: c.id, body: { active: v } });
-                          toast.success("Đã cập nhật.");
+                          toast.success(v ? "Đã hiện danh mục" : "Đã ẩn danh mục", {
+                            description: c.name,
+                          });
                         } catch (e) {
-                          toast.error(apiErrorMessage(e));
+                          toast.error("Cập nhật danh mục thất bại", {
+                            description: apiErrorMessage(e),
+                          });
                         }
                       }}
                     />
