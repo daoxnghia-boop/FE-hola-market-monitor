@@ -163,6 +163,15 @@ export const orderApi = {
 export const reviewApi = {
   create: (orderId: string, body: { rating: number; comment?: string }) =>
     apiRequest<ReviewDto>(`/orders/${orderId}/review`, { method: "POST", body }),
+  createProductReview: (
+    orderId: string,
+    productId: string,
+    body: ProductReviewCreateInput,
+  ) =>
+    apiRequest<ProductReviewDto>(
+      `/orders/${orderId}/items/${productId}/review`,
+      { method: "POST", body },
+    ),
 };
 
 export const notificationApi = {
