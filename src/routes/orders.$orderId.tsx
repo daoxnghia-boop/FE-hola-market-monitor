@@ -39,6 +39,9 @@ function OrderDetailPage() {
   const cancelOrder = useCancelOrder();
   const reorder = useReorder();
   const navigate = useNavigate();
+  const [reviewTarget, setReviewTarget] = useState<
+    { productId: string; productName: string } | null
+  >(null);
 
   if (isLoading)
     return (
