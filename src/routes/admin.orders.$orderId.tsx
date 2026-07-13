@@ -21,6 +21,7 @@ function AdminOrderDetail() {
 
   return (
     <div className="space-y-4">
+      <InlineFetchingBar show={q.isFetching && !q.isLoading} />
       <Link
         to="/admin/orders"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
