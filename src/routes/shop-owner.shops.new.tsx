@@ -59,7 +59,7 @@ function NewShopPage() {
       phone: user?.phone ?? "", address: "", area: "", description: "",
       logoUrl: "", coverUrl: "", openHoursText: "08:00 – 21:00",
       prepTimeMinutes: 15, categoryIds: [], supportedZoneIds: [],
-      acceptedTerms: false as unknown as true,
+      acceptedTerms: false,
     },
   });
   const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setValue } = form;
