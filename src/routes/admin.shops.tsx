@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { apiErrorMessage } from "@/lib/api/client";
+import { deferOpen } from "@/lib/defer-open";
 import type { ShopDto } from "@/lib/api/types";
 
 export const Route = createFileRoute("/admin/shops")({
