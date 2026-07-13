@@ -46,7 +46,7 @@ import {
 
 type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
-const STORAGE_KEY = "hola-mock-state-v6";
+const STORAGE_KEY = "hola-mock-state-v7";
 
 type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
 
