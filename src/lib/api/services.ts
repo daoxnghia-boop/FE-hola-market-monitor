@@ -1,10 +1,29 @@
 import { apiRequest } from "./client";
 import type {
-  AddressDto, AdminAuditDto, AdminStatsDto, AdminUserSummaryDto,
-  CartDto, CategoryDto, DeliveryZoneDto, NotificationDto, NotificationPageDto,
-  OrderDetailDto, OrderSummaryDto, OtpChallengeDto, Paginated, ProductDto,
-  ProductInput, ReviewDto, SearchDto, SessionDto, ShopDto, ShopOwnerStatsDto,
-  ShopRegistrationInput, UserDto, VerifyOtpResultDto, VoucherDto,
+  AddressDto,
+  AdminAuditDto,
+  AdminStatsDto,
+  AdminUserSummaryDto,
+  CartDto,
+  CategoryDto,
+  DeliveryZoneDto,
+  NotificationDto,
+  NotificationPageDto,
+  OrderDetailDto,
+  OrderSummaryDto,
+  OtpChallengeDto,
+  Paginated,
+  ProductDto,
+  ProductInput,
+  ReviewDto,
+  SearchDto,
+  SessionDto,
+  ShopDto,
+  ShopOwnerStatsDto,
+  ShopRegistrationInput,
+  UserDto,
+  VerifyOtpResultDto,
+  VoucherDto,
 } from "./types";
 
 export const authApi = {
@@ -20,8 +39,7 @@ export const authApi = {
 
 export const userApi = {
   me: () => apiRequest<UserDto>("/users/me"),
-  updateMe: (body: Partial<UserDto>) =>
-    apiRequest<UserDto>("/users/me", { method: "PATCH", body }),
+  updateMe: (body: Partial<UserDto>) => apiRequest<UserDto>("/users/me", { method: "PATCH", body }),
   addresses: () => apiRequest<{ items: AddressDto[] }>("/users/me/addresses"),
   favoriteShops: (deliveryZoneId?: string) =>
     apiRequest<Paginated<ShopDto>>("/users/me/favorite-shops", { query: { deliveryZoneId } }),
@@ -30,15 +48,20 @@ export const userApi = {
       query: { deliveryZoneId, limit },
     }),
   addFavorite: (shopId: string) =>
-    apiRequest<{ shopId: string; isFavorite: true }>(`/users/me/favorite-shops/${shopId}`, { method: "PUT" }),
+    apiRequest<{ shopId: string; isFavorite: true }>(`/users/me/favorite-shops/${shopId}`, {
+      method: "PUT",
+    }),
   removeFavorite: (shopId: string) =>
     apiRequest<void>(`/users/me/favorite-shops/${shopId}`, { method: "DELETE" }),
 };
 
 export const catalogApi = {
-  categories: () => apiRequest<{ items: CategoryDto[] }>("/categories", { query: { active: true } }),
-  deliveryZones: () => apiRequest<{ items: DeliveryZoneDto[] }>("/delivery-zones", { query: { active: true } }),
-  shops: (query: Record<string, unknown> = {}) => apiRequest<Paginated<ShopDto>>("/shops", { query }),
+  categories: () =>
+    apiRequest<{ items: CategoryDto[] }>("/categories", { query: { active: true } }),
+  deliveryZones: () =>
+    apiRequest<{ items: DeliveryZoneDto[] }>("/delivery-zones", { query: { active: true } }),
+  shops: (query: Record<string, unknown> = {}) =>
+    apiRequest<Paginated<ShopDto>>("/shops", { query }),
   shop: (shopId: string, deliveryZoneId?: string) =>
     apiRequest<ShopDto>(`/shops/${shopId}`, { query: { deliveryZoneId } }),
   shopProducts: (shopId: string, query: Record<string, unknown> = {}) =>
@@ -59,11 +82,16 @@ export const voucherApi = {
 
 export const cartApi = {
   get: () => apiRequest<CartDto>("/cart"),
-  addItem: (body: { productId: string; quantity: number; note?: string; replaceExistingCart?: boolean }) =>
-    apiRequest<CartDto>("/cart/items", { method: "POST", body }),
+  addItem: (body: {
+    productId: string;
+    quantity: number;
+    note?: string;
+    replaceExistingCart?: boolean;
+  }) => apiRequest<CartDto>("/cart/items", { method: "POST", body }),
   updateItem: (itemId: string, body: { quantity?: number; note?: string }) =>
     apiRequest<CartDto>(`/cart/items/${itemId}`, { method: "PATCH", body }),
-  removeItem: (itemId: string) => apiRequest<CartDto>(`/cart/items/${itemId}`, { method: "DELETE" }),
+  removeItem: (itemId: string) =>
+    apiRequest<CartDto>(`/cart/items/${itemId}`, { method: "DELETE" }),
   clear: () => apiRequest<CartDto>("/cart", { method: "DELETE" }),
   setZone: (deliveryZoneId: string) =>
     apiRequest<CartDto>("/cart/delivery-zone", { method: "PUT", body: { deliveryZoneId } }),
@@ -79,16 +107,25 @@ export const orderApi = {
   detail: (orderId: string) => apiRequest<OrderDetailDto>(`/orders/${orderId}`),
   create: (
     body: {
-      cartId: string; addressId?: string;
-      delivery?: { deliveryZoneId: string; recipientName: string; phone: string; addressLine: string };
-      note?: string; paymentMethod: "cash_on_delivery";
-    }, idempotencyKey: string,
+      cartId: string;
+      addressId?: string;
+      delivery?: {
+        deliveryZoneId: string;
+        recipientName: string;
+        phone: string;
+        addressLine: string;
+      };
+      note?: string;
+      paymentMethod: "cash_on_delivery";
+    },
+    idempotencyKey: string,
   ) => apiRequest<OrderDetailDto>("/orders", { method: "POST", body, idempotencyKey }),
   cancel: (orderId: string, body: { reasonCode?: string; reasonText?: string } = {}) =>
     apiRequest<OrderDetailDto>(`/orders/${orderId}/cancel`, { method: "POST", body }),
   reorder: (orderId: string, replaceExistingCart = false) =>
     apiRequest<{ cart: CartDto; skippedItems: Array<{ productId: string; reason: string }> }>(
-      `/orders/${orderId}/reorder`, { method: "POST", body: { replaceExistingCart } },
+      `/orders/${orderId}/reorder`,
+      { method: "POST", body: { replaceExistingCart } },
     ),
 };
 
@@ -103,11 +140,13 @@ export const notificationApi = {
   unreadCount: () => apiRequest<{ unreadCount: number }>("/notifications/unread-count"),
   markRead: (notificationId: string) =>
     apiRequest<NotificationDto>(`/notifications/${notificationId}/read`, {
-      method: "PATCH", body: { read: true },
+      method: "PATCH",
+      body: { read: true },
     }),
   markAllRead: () =>
     apiRequest<{ updatedCount: number; unreadCount: number }>("/notifications/read-all", {
-      method: "POST", body: {},
+      method: "POST",
+      body: {},
     }),
 };
 
@@ -121,8 +160,11 @@ export const adminApi = {
   shop: (id: string) => apiRequest<ShopDto>(`/admin/shops/${id}`),
   updateShop: (id: string, body: Partial<ShopDto>) =>
     apiRequest<ShopDto>(`/admin/shops/${id}`, { method: "PATCH", body }),
-  shopAction: (id: string, action: "approve" | "reject" | "suspend" | "activate", reason?: string) =>
-    apiRequest<ShopDto>(`/admin/shops/${id}/${action}`, { method: "POST", body: { reason } }),
+  shopAction: (
+    id: string,
+    action: "approve" | "reject" | "suspend" | "activate",
+    reason?: string,
+  ) => apiRequest<ShopDto>(`/admin/shops/${id}/${action}`, { method: "POST", body: { reason } }),
 
   orders: (query: Record<string, unknown> = {}) =>
     apiRequest<Paginated<OrderSummaryDto>>("/admin/orders", { query }),
@@ -185,5 +227,8 @@ export const shopOwnerApi = {
   advanceOrder: (id: string) =>
     apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/advance`, { method: "POST", body: {} }),
   cancelOrder: (id: string, reason: string) =>
-    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/cancel`, { method: "POST", body: { reason } }),
+    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/cancel`, {
+      method: "POST",
+      body: { reason },
+    }),
 };

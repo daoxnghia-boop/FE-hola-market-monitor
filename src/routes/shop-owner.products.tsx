@@ -12,17 +12,35 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  useOwnerShops, useOwnerProducts, useOwnerProductMutations, useCategories,
+  useOwnerShops,
+  useOwnerProducts,
+  useOwnerProductMutations,
+  useCategories,
 } from "@/lib/api/hooks";
 import { apiErrorMessage } from "@/lib/api/client";
 import { formatVND } from "@/lib/domain";
@@ -38,7 +56,10 @@ const schema = z.object({
   name: z.string().trim().min(2, "Tối thiểu 2 ký tự").max(120),
   price: z.coerce.number().int().min(1000, "Tối thiểu 1.000đ"),
   description: z.string().max(400),
-  imageUrl: z.string().trim().refine((v) => v === "" || /^https?:\/\//.test(v), "URL không hợp lệ"),
+  imageUrl: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^https?:\/\//.test(v), "URL không hợp lệ"),
   categoryId: z.string().min(1, "Chọn danh mục"),
   prepTimeMinutes: z.coerce.number().int().min(1).max(180),
   available: z.boolean(),
@@ -50,9 +71,7 @@ function ProductsPage() {
   const categories = useCategories();
   const [shopFilter, setShopFilter] = useState<string>("all");
   const [q, setQ] = useState("");
-  const products = useOwnerProducts(
-    shopFilter === "all" ? { q } : { shopId: shopFilter, q },
-  );
+  const products = useOwnerProducts(shopFilter === "all" ? { q } : { shopId: shopFilter, q });
   const mut = useOwnerProductMutations();
   const [editing, setEditing] = useState<ProductDto | "new" | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<ProductDto | null>(null);
@@ -66,7 +85,9 @@ function ProductsPage() {
     try {
       await mut.update.mutateAsync({ id: p.id, body: { available: !p.available } });
       toast.success(!p.available ? "Đã bật bán" : "Đã tạm ngưng bán");
-    } catch (e) { toast.error(apiErrorMessage(e)); }
+    } catch (e) {
+      toast.error(apiErrorMessage(e));
+    }
   };
 
   const doDelete = async () => {
@@ -74,7 +95,9 @@ function ProductsPage() {
     try {
       await mut.remove.mutateAsync(confirmDelete.id);
       toast.success("Đã xoá món.");
-    } catch (e) { toast.error(apiErrorMessage(e)); }
+    } catch (e) {
+      toast.error(apiErrorMessage(e));
+    }
     setConfirmDelete(null);
   };
 
@@ -82,8 +105,12 @@ function ProductsPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="mr-auto text-xl font-extrabold">Món ăn</h1>
-        <Button size="sm" className="rounded-full" onClick={() => setEditing("new")}
-          disabled={approvedShops.length === 0}>
+        <Button
+          size="sm"
+          className="rounded-full"
+          onClick={() => setEditing("new")}
+          disabled={approvedShops.length === 0}
+        >
           <Plus className="size-4" /> Thêm món
         </Button>
       </div>
@@ -91,14 +118,23 @@ function ProductsPage() {
       <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-card p-3 shadow-card">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm theo tên món" className="pl-9" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Tìm theo tên món"
+            className="pl-9"
+          />
         </div>
         <Select value={shopFilter} onValueChange={setShopFilter}>
-          <SelectTrigger className="w-[220px]"><SelectValue placeholder="Chọn quán" /></SelectTrigger>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Chọn quán" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả quán của tôi</SelectItem>
             {(shops.data ?? []).map((s) => (
-              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -112,7 +148,9 @@ function ProductsPage() {
 
       {products.isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
+          ))}
         </div>
       ) : !products.data?.length ? (
         <div className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card">
@@ -125,8 +163,12 @@ function ProductsPage() {
             return (
               <div key={p.id} className="rounded-2xl bg-card p-3 shadow-card">
                 <div className="flex gap-3">
-                  <img src={p.imageUrl} alt={p.name}
-                    className="size-20 shrink-0 rounded-xl object-cover" loading="lazy" />
+                  <img
+                    src={p.imageUrl}
+                    alt={p.name}
+                    className="size-20 shrink-0 rounded-xl object-cover"
+                    loading="lazy"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">
                       <span className="line-clamp-1 font-bold">{p.name}</span>
@@ -143,7 +185,15 @@ function ProductsPage() {
                     <Pencil className="size-4" /> Sửa
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => toggleAvailable(p)}>
-                    {p.available ? <><EyeOff className="size-4" /> Tạm ngưng</> : <><Eye className="size-4" /> Bật bán</>}
+                    {p.available ? (
+                      <>
+                        <EyeOff className="size-4" /> Tạm ngưng
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="size-4" /> Bật bán
+                      </>
+                    )}
                   </Button>
                   <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(p)}>
                     <Trash2 className="size-4" /> Xoá
@@ -171,7 +221,9 @@ function ProductsPage() {
               toast.success("Đã thêm món mới.");
             }
             setEditing(null);
-          } catch (e) { toast.error(apiErrorMessage(e)); }
+          } catch (e) {
+            toast.error(apiErrorMessage(e));
+          }
         }}
       />
 
@@ -180,7 +232,8 @@ function ProductsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Xoá món?</AlertDialogTitle>
             <AlertDialogDescription>
-              Món <b>{confirmDelete?.name}</b> sẽ bị xoá. Nếu món đã có trong đơn hàng cũ, hệ thống sẽ chặn xoá — hãy tạm ngưng bán thay vì xoá.
+              Món <b>{confirmDelete?.name}</b> sẽ bị xoá. Nếu món đã có trong đơn hàng cũ, hệ thống
+              sẽ chặn xoá — hãy tạm ngưng bán thay vì xoá.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -194,7 +247,12 @@ function ProductsPage() {
 }
 
 function ProductDialog({
-  open, onOpenChange, product, shops, categories, onSubmit,
+  open,
+  onOpenChange,
+  product,
+  shops,
+  categories,
+  onSubmit,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -216,7 +274,13 @@ function ProductDialog({
       available: product?.available ?? true,
     },
   });
-  const { register, handleSubmit, formState: { errors, isSubmitting }, watch, setValue } = form;
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+    setValue,
+  } = form;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -231,26 +295,44 @@ function ProductDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Quán</Label>
-              <Select value={watch("shopId")}
+              <Select
+                value={watch("shopId")}
                 onValueChange={(v) => setValue("shopId", v, { shouldValidate: true })}
-                disabled={!!product}>
-                <SelectTrigger><SelectValue placeholder="Chọn quán" /></SelectTrigger>
+                disabled={!!product}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn quán" />
+                </SelectTrigger>
                 <SelectContent>
-                  {shops.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  {shops.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.shopId && <p className="text-xs text-destructive">{errors.shopId.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Danh mục</Label>
-              <Select value={watch("categoryId")}
-                onValueChange={(v) => setValue("categoryId", v, { shouldValidate: true })}>
-                <SelectTrigger><SelectValue placeholder="Chọn danh mục" /></SelectTrigger>
+              <Select
+                value={watch("categoryId")}
+                onValueChange={(v) => setValue("categoryId", v, { shouldValidate: true })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn danh mục" />
+                </SelectTrigger>
                 <SelectContent>
-                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {errors.categoryId && <p className="text-xs text-destructive">{errors.categoryId.message}</p>}
+              {errors.categoryId && (
+                <p className="text-xs text-destructive">{errors.categoryId.message}</p>
+              )}
             </div>
           </div>
 
@@ -274,27 +356,38 @@ function ProductDialog({
 
           <div className="space-y-1.5">
             <Label>Mô tả</Label>
-            <Textarea rows={3} {...register("description")} placeholder="Nguyên liệu, khẩu phần..." />
+            <Textarea
+              rows={3}
+              {...register("description")}
+              placeholder="Nguyên liệu, khẩu phần..."
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label>URL ảnh</Label>
             <Input {...register("imageUrl")} placeholder="https://..." />
-            {errors.imageUrl && <p className="text-xs text-destructive">{errors.imageUrl.message}</p>}
+            {errors.imageUrl && (
+              <p className="text-xs text-destructive">{errors.imageUrl.message}</p>
+            )}
             <p className="text-xs text-muted-foreground">Để trống sẽ dùng ảnh mẫu.</p>
           </div>
 
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" className="size-4"
+            <input
+              type="checkbox"
+              className="size-4"
               checked={watch("available")}
-              onChange={(e) => setValue("available", e.target.checked)} />
+              onChange={(e) => setValue("available", e.target.checked)}
+            />
             Đang bán
           </label>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Huỷ</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Huỷ
+            </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Đang lưu..." : (product ? "Lưu thay đổi" : "Thêm món")}
+              {isSubmitting ? "Đang lưu..." : product ? "Lưu thay đổi" : "Thêm món"}
             </Button>
           </DialogFooter>
         </form>

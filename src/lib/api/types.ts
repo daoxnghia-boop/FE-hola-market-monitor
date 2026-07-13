@@ -76,7 +76,6 @@ export type ShopRegistrationInput = {
   acceptedTerms: boolean;
 };
 
-
 export type ProductDto = {
   id: string;
   shopId: string;
@@ -94,7 +93,13 @@ export type ProductDto = {
 };
 
 export type VoucherStatus =
-  "usable" | "soon_expire" | "used" | "expired" | "locked" | "not_eligible" | "disabled";
+  | "usable"
+  | "soon_expire"
+  | "used"
+  | "expired"
+  | "locked"
+  | "not_eligible"
+  | "disabled";
 
 export type VoucherDto = {
   id: string;
@@ -329,4 +334,3 @@ export type ShopOwnerStatsDto = {
   ordersByStatus: Array<{ status: OrderStatus; count: number }>;
   latestOrders: OrderSummaryDto[];
 };
-

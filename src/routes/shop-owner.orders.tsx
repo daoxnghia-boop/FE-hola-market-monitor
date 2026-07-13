@@ -4,7 +4,11 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { useOwnerOrders, useOwnerShops } from "@/lib/api/hooks";
@@ -17,8 +21,12 @@ export const Route = createFileRoute("/shop-owner/orders")({
 });
 
 const STATUSES: OrderStatus[] = [
-  "cho_quan_xac_nhan", "quan_da_xac_nhan", "dang_chuan_bi",
-  "dang_giao", "hoan_thanh", "da_huy",
+  "cho_quan_xac_nhan",
+  "quan_da_xac_nhan",
+  "dang_chuan_bi",
+  "dang_giao",
+  "hoan_thanh",
+  "da_huy",
 ];
 
 function OrdersPage() {
@@ -38,27 +46,47 @@ function OrdersPage() {
       <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-card p-3 shadow-card">
         <div className="relative min-w-[220px] flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="Mã đơn, tên/SĐT khách" className="pl-9" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Mã đơn, tên/SĐT khách"
+            className="pl-9"
+          />
         </div>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Trạng thái" /></SelectTrigger>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Trạng thái" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả trạng thái</SelectItem>
-            {STATUSES.map((s) => <SelectItem key={s} value={s}>{ORDER_STATUS_LABEL[s]}</SelectItem>)}
+            {STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {ORDER_STATUS_LABEL[s]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={shopId} onValueChange={setShopId}>
-          <SelectTrigger className="w-[220px]"><SelectValue placeholder="Chọn quán" /></SelectTrigger>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Chọn quán" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả quán của tôi</SelectItem>
-            {(shops.data ?? []).map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            {(shops.data ?? []).map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
       {orders.isLoading ? (
-        <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}</div>
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-2xl" />
+          ))}
+        </div>
       ) : !orders.data?.length ? (
         <div className="rounded-2xl bg-card p-6 text-center text-sm text-muted-foreground shadow-card">
           Không có đơn nào phù hợp.
@@ -67,8 +95,11 @@ function OrdersPage() {
         <ul className="space-y-2">
           {orders.data.map((o) => (
             <li key={o.id}>
-              <Link to="/shop-owner/orders/$orderId" params={{ orderId: o.id }}
-                className="block rounded-2xl bg-card p-3 shadow-card transition hover:shadow-pop">
+              <Link
+                to="/shop-owner/orders/$orderId"
+                params={{ orderId: o.id }}
+                className="block rounded-2xl bg-card p-3 shadow-card transition hover:shadow-pop"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -79,7 +110,9 @@ function OrdersPage() {
                     <div className="mt-0.5 truncate text-xs text-muted-foreground">
                       {o.customerName ?? "Khách"} · {o.customerPhone ?? "—"} · {o.itemSummary}
                     </div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">{formatDateTime(o.placedAt)}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {formatDateTime(o.placedAt)}
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className="font-bold text-primary">{formatVND(o.total)}</div>
