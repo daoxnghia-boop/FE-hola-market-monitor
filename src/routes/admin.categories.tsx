@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InlineFetchingBar } from "@/components/admin-skeletons";
 import {
   Table,
   TableBody,
@@ -97,6 +98,7 @@ function AdminCategories() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="px-4 pt-2"><InlineFetchingBar show={cats.isFetching && !cats.isLoading} /></div>
         {cats.isLoading ? (
           <div className="space-y-2 p-4">
             {Array.from({ length: 4 }).map((_, i) => (

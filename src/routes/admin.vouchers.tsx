@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InlineFetchingBar } from "@/components/admin-skeletons";
 import {
   Table,
   TableBody,
@@ -107,6 +108,7 @@ function AdminVouchers() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="px-4 pt-2"><InlineFetchingBar show={vouchers.isFetching && !vouchers.isLoading} /></div>
         {vouchers.isLoading ? (
           <div className="space-y-2 p-4">
             {Array.from({ length: 4 }).map((_, i) => (
