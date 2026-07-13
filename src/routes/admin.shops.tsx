@@ -80,10 +80,47 @@ function AdminShops() {
   };
   const shops = useAdminShops(params);
   const action = useAdminShopAction();
+  const updateShop = useAdminUpdateShop();
   const [confirm, setConfirm] = useState<{
     shop: ShopDto;
     action: "approve" | "reject" | "suspend" | "activate";
   } | null>(null);
+
+  const [editing, setEditing] = useState<ShopDto | null>(null);
+  const [form, setForm] = useState({ name: "", description: "", area: "", address: "" });
+
+  const openEdit = (s: ShopDto) => {
+    setEditing(s);
+    setForm({
+      name: s.name,
+      description: s.description ?? "",
+      area: s.area ?? "",
+      address: s.address ?? "",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    if (!form.name.trim()) {
+      toast.error("Tên quán bắt buộc.");
+      return;
+    }
+    try {
+      await updateShop.mutateAsync({
+        id: editing.id,
+        body: {
+          name: form.name.trim(),
+          description: form.description.trim(),
+          area: form.area.trim(),
+          address: form.address.trim(),
+        },
+      });
+      toast.success("Đã cập nhật quán.");
+      setEditing(null);
+    } catch (e) {
+      toast.error(apiErrorMessage(e));
+    }
+  };
 
   const doAction = async () => {
     if (!confirm) return;
