@@ -170,18 +170,18 @@ function OrderDetailPage() {
                               ✓ Đã đánh giá món
                             </span>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setReviewTarget({
-                                  productId: it.productId,
-                                  productName: it.productName,
-                                })
-                              }
+                            <Link
+                              to="/products/$productId"
+                              params={{ productId: it.productId }}
+                              search={{
+                                orderId: order.id,
+                                orderItemId: `${order.id}:${it.productId}`,
+                              }}
+                              hash="write-review"
                               className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
                             >
                               <Star className="size-3" /> Đánh giá món
-                            </button>
+                            </Link>
                           )}
                         </div>
                       )}
