@@ -138,11 +138,26 @@
     color: var(--color-foreground);
     -webkit-font-smoothing: antialiased;
   }
-  /* Neutralize Radix scroll-lock padding: html already reserves the gutter,
-     so body must not receive extra padding-right when overlays open. */
-  body[data-scroll-locked] {
+  /* Neutralize Radix / react-remove-scroll effects: html already reserves the
+     scrollbar gutter via `scrollbar-gutter: stable`, so body must not receive
+     any extra padding/margin or lose its scroll when overlays open. Covers
+     Dialog, Sheet, AlertDialog, DropdownMenu, Select, Combobox, Popover. */
+  body[data-scroll-locked],
+  body[data-scroll-locked][style] {
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    overflow: visible !important;
+    /* react-remove-scroll may set a positive scrollbar-size var; zero it so
+       any downstream calc()-based padding also becomes zero. */
+    --removed-body-scroll-bar-size: 0px !important;
+  }
+  /* Some Radix versions add scroll lock on html instead of body. */
+  html[data-scroll-locked] {
     padding-right: 0 !important;
     margin-right: 0 !important;
+    overflow-y: scroll !important;
   }
 }
 
