@@ -61,7 +61,6 @@ export type ShopDto = {
   deliveryFees?: Record<string, number>;
 };
 
-
 export type ShopRegistrationInput = {
   name: string;
   slug?: string;
@@ -139,6 +138,7 @@ export type ProductReviewDto = {
   imageUrls?: string[];
   verifiedPurchase: boolean;
   createdAt: string;
+  updatedAt?: string;
   shopReply?: { content: string; createdAt: string };
 };
 
@@ -168,9 +168,37 @@ export type ProductReviewListParams = {
 export type ProductReviewListDto = Paginated<ProductReviewDto>;
 
 export type ProductReviewCreateInput = {
+  orderItemId?: string;
   rating: number;
   comment?: string;
   imageUrls?: string[];
+};
+
+export type ProductReviewUpdateInput = {
+  rating?: number;
+  comment?: string;
+  imageUrls?: string[];
+};
+
+export type ProductReviewEligibilityReason =
+  | "not_authenticated"
+  | "not_purchased"
+  | "order_not_completed"
+  | "already_reviewed"
+  | "eligible";
+
+export type ProductReviewEligibilityDto = {
+  authenticated: boolean;
+  eligible: boolean;
+  reason: ProductReviewEligibilityReason;
+  eligibleOrderItems: Array<{
+    orderId: string;
+    orderCode: string;
+    orderItemId: string;
+    completedAt: string;
+  }>;
+  pendingOrder?: { orderId: string; orderCode: string; status: OrderStatus };
+  existingReview?: ProductReviewDto;
 };
 
 export type VoucherStatus =

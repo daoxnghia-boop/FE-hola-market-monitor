@@ -46,7 +46,7 @@ import {
 
 type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
-const STORAGE_KEY = "hola-mock-state-v6";
+const STORAGE_KEY = "hola-mock-state-v7";
 
 type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
 
@@ -235,8 +235,6 @@ function sanitizeDeliveryFees(
   return Object.keys(out).length ? out : undefined;
 }
 
-
-
 function decorateShop(s: ShopDto, zoneId?: string): ShopDto {
   const isFav = state.favoriteShopIds.includes(s.id);
   const zone = zoneId ? (state.zones.find((z) => z.id === zoneId) ?? null) : null;
@@ -273,14 +271,15 @@ function decorateProductDetail(p: ProductDto, zoneId?: string): ProductDetailDto
   const category = state.categories.find((c) => c.id === p.categoryId);
   const fee = shop && zone ? shopDeliveryFee(shop, zone) : null;
   const supported = shop && zone ? shop.supportedZoneIds.includes(zone.id) : false;
-  const delivery = zone && shop
-    ? {
-        supported,
-        fee,
-        estimatedDeliveryMinutes: shop.estimatedDeliveryMinutes,
-        reason: !supported ? "Quán chưa giao tới khu vực này." : undefined,
-      }
-    : undefined;
+  const delivery =
+    zone && shop
+      ? {
+          supported,
+          fee,
+          estimatedDeliveryMinutes: shop.estimatedDeliveryMinutes,
+          reason: !supported ? "Quán chưa giao tới khu vực này." : undefined,
+        }
+      : undefined;
   const fallbackShop: ProductDetailDto["shop"] = shop
     ? shopMiniFor(shop)
     : {
@@ -324,9 +323,8 @@ function productReviewSummary(productId: string): ProductReviewSummaryDto {
     dist[key] += 1;
   }
   const total = list.length;
-  const avg = total > 0
-    ? Math.round((list.reduce((s, r) => s + r.rating, 0) / total) * 10) / 10
-    : 0;
+  const avg =
+    total > 0 ? Math.round((list.reduce((s, r) => s + r.rating, 0) / total) * 10) / 10 : 0;
   return { averageRating: avg, totalReviews: total, ratingDistribution: dist };
 }
 
@@ -349,11 +347,78 @@ function recomputeProductAggregates(productId: string) {
   }
 }
 
+function computeReviewEligibility(
+  productId: string,
+): import("../types").ProductReviewEligibilityDto {
+  const user = currentUser();
+  if (!user) {
+    return {
+      authenticated: false,
+      eligible: false,
+      reason: "not_authenticated",
+      eligibleOrderItems: [],
+    };
+  }
+  const existing = state.productReviews.find(
+    (r) => r.productId === productId && r.user.id === user.id,
+  );
+  if (existing) {
+    return {
+      authenticated: true,
+      eligible: false,
+      reason: "already_reviewed",
+      eligibleOrderItems: [],
+      existingReview: existing,
+    };
+  }
+  const userOrders = state.orders.filter((o) => (o.customerId ?? null) === user.id);
+  const withProduct = userOrders.filter((o) => o.items.some((it) => it.productId === productId));
+  if (withProduct.length === 0) {
+    return {
+      authenticated: true,
+      eligible: false,
+      reason: "not_purchased",
+      eligibleOrderItems: [],
+    };
+  }
+  const completed = withProduct.filter((o) => o.status === "hoan_thanh");
+  const eligibleItems = completed
+    .filter((o) => !state.reviewedOrderItems.includes(`${o.id}:${productId}`))
+    .map((o) => ({
+      orderId: o.id,
+      orderCode: o.displayCode,
+      orderItemId: `${o.id}:${productId}`,
+      completedAt: o.statusHistory.find((h) => h.status === "hoan_thanh")?.occurredAt ?? o.placedAt,
+    }));
+  if (eligibleItems.length === 0) {
+    // has purchase but no completed non-reviewed order
+    const pending = withProduct.find((o) => o.status !== "da_huy");
+    return {
+      authenticated: true,
+      eligible: false,
+      reason: "order_not_completed",
+      eligibleOrderItems: [],
+      pendingOrder: pending
+        ? {
+            orderId: pending.id,
+            orderCode: pending.displayCode,
+            status: pending.status,
+          }
+        : undefined,
+    };
+  }
+  return {
+    authenticated: true,
+    eligible: true,
+    reason: "eligible",
+    eligibleOrderItems: eligibleItems,
+  };
+}
+
 function sameShopProducts(current: ProductDto, limit: number): ProductDto[] {
   const shop = state.shops.find((s) => s.id === current.shopId);
   if (!shop) return [];
-  const active =
-    shop.approvalStatus === "approved" && shop.operationStatus === "active";
+  const active = shop.approvalStatus === "approved" && shop.operationStatus === "active";
   if (!active) return [];
   const siblings = state.products.filter(
     (p) => p.shopId === current.shopId && p.id !== current.id && p.available,
@@ -396,8 +461,6 @@ function relatedProducts(
   };
   return pool.sort((a, b) => score(b) - score(a)).slice(0, limit);
 }
-
-
 
 function paginate<T>(list: T[], pageSize?: string) {
   const size = pageSize ? Number(pageSize) : list.length;
@@ -666,16 +729,20 @@ async function route(ctx: Ctx): Promise<unknown> {
   const prodReviewsMatch = path.match(/^\/products\/([^/]+)\/reviews$/);
   if (prodReviewsMatch && method === "GET") {
     const productId = prodReviewsMatch[1];
-    if (!state.products.some((p) => p.id === productId))
-      notFound("Không tìm thấy sản phẩm.");
+    if (!state.products.some((p) => p.id === productId)) notFound("Không tìm thấy sản phẩm.");
     return ok(listProductReviews(productId, query));
   }
   const prodReviewSummaryMatch = path.match(/^\/products\/([^/]+)\/review-summary$/);
   if (prodReviewSummaryMatch && method === "GET") {
     const productId = prodReviewSummaryMatch[1];
-    if (!state.products.some((p) => p.id === productId))
-      notFound("Không tìm thấy sản phẩm.");
+    if (!state.products.some((p) => p.id === productId)) notFound("Không tìm thấy sản phẩm.");
     return ok(productReviewSummary(productId));
+  }
+  const prodReviewEligMatch = path.match(/^\/products\/([^/]+)\/review-eligibility$/);
+  if (prodReviewEligMatch && method === "GET") {
+    const productId = prodReviewEligMatch[1];
+    if (!state.products.some((p) => p.id === productId)) notFound("Không tìm thấy sản phẩm.");
+    return ok(computeReviewEligibility(productId));
   }
   const prodRelatedMatch = path.match(/^\/products\/([^/]+)\/related$/);
   if (prodRelatedMatch && method === "GET") {
@@ -990,37 +1057,31 @@ async function route(ctx: Ctx): Promise<unknown> {
     return ok(review);
   }
   // POST /orders/:orderId/items/:productId/review — product-scoped review.
-  const prodReviewCreateMatch = path.match(
-    /^\/orders\/([^/]+)\/items\/([^/]+)\/review$/,
-  );
+  const prodReviewCreateMatch = path.match(/^\/orders\/([^/]+)\/items\/([^/]+)\/review$/);
   if (prodReviewCreateMatch && method === "POST") {
+    if (!currentUser()) apiError(401, "AUTH_REQUIRED", "Vui lòng đăng nhập.");
     const u = requireActiveUser();
     const orderId = prodReviewCreateMatch[1];
     const productId = prodReviewCreateMatch[2];
     const o = state.orders.find((x) => x.id === orderId);
     if (!o) notFound("Không tìm thấy đơn hàng.");
     if (o!.customerId && o!.customerId !== u.id)
-      forbidden("Đơn hàng không thuộc về bạn.");
+      apiError(403, "ORDER_NOT_OWNED", "Đơn hàng không thuộc về bạn.");
     if (o!.status !== "hoan_thanh")
-      badRequest(
-        "ORDER_NOT_COMPLETED",
-        "Chỉ có thể đánh giá sau khi đơn hàng hoàn thành.",
-      );
+      conflict("ORDER_NOT_COMPLETED", "Chỉ có thể đánh giá sau khi đơn hàng hoàn thành.");
     const item = o!.items.find((it) => it.productId === productId);
-    if (!item) notFound("Món ăn không có trong đơn hàng này.");
+    if (!item) conflict("PRODUCT_NOT_IN_ORDER", "Món ăn không có trong đơn hàng này.");
     const key = `${orderId}:${productId}`;
     if (state.reviewedOrderItems.includes(key))
-      conflict(
-        "PRODUCT_ALREADY_REVIEWED",
-        "Bạn đã đánh giá món này trong đơn hàng này rồi.",
-      );
+      conflict("REVIEW_ALREADY_EXISTS", "Bạn đã đánh giá món này trong đơn hàng này rồi.");
     const b = body as ProductReviewCreateInput;
     const rating = Number(b?.rating);
     if (!Number.isInteger(rating) || rating < 1 || rating > 5)
-      badRequest("INVALID_RATING", "Số sao phải là số nguyên từ 1 đến 5.");
+      apiError(422, "INVALID_RATING", "Số sao phải là số nguyên từ 1 đến 5.");
     const comment = typeof b?.comment === "string" ? b.comment.trim() : undefined;
-    if (comment && comment.length > 500)
-      badRequest("COMMENT_TOO_LONG", "Nội dung tối đa 500 ký tự.");
+    if (comment && comment.length > 1000)
+      apiError(422, "INVALID_COMMENT", "Nội dung tối đa 1000 ký tự.");
+    const imageUrls = Array.isArray(b?.imageUrls) ? b.imageUrls.slice(0, 3) : undefined;
     const review: ProductReviewDto = {
       id: `pr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       productId,
@@ -1030,7 +1091,7 @@ async function route(ctx: Ctx): Promise<unknown> {
       user: { id: u.id, displayName: u.fullName, avatarUrl: u.avatarUrl },
       rating,
       comment: comment || undefined,
-      imageUrls: Array.isArray(b?.imageUrls) ? b.imageUrls.slice(0, 6) : undefined,
+      imageUrls,
       verifiedPurchase: true,
       createdAt: new Date().toISOString(),
     };
@@ -1040,7 +1101,70 @@ async function route(ctx: Ctx): Promise<unknown> {
     save();
     return ok(review);
   }
-
+  // PATCH /product-reviews/:reviewId
+  const prodReviewPatchMatch = path.match(/^\/product-reviews\/([^/]+)$/);
+  if (prodReviewPatchMatch && method === "PATCH") {
+    const u = requireActiveUser();
+    const reviewId = prodReviewPatchMatch[1];
+    const idx = state.productReviews.findIndex((r) => r.id === reviewId);
+    if (idx < 0) notFound("Không tìm thấy đánh giá.");
+    const existing = state.productReviews[idx];
+    if (existing.user.id !== u.id)
+      apiError(403, "REVIEW_NOT_OWNED", "Bạn không thể sửa đánh giá của người khác.");
+    const b = (body ?? {}) as import("../types").ProductReviewUpdateInput;
+    let rating = existing.rating;
+    if (b.rating !== undefined) {
+      const r = Number(b.rating);
+      if (!Number.isInteger(r) || r < 1 || r > 5)
+        apiError(422, "INVALID_RATING", "Số sao phải là số nguyên từ 1 đến 5.");
+      rating = r;
+    }
+    let comment = existing.comment;
+    if (b.comment !== undefined) {
+      const c = String(b.comment ?? "").trim();
+      if (c.length > 1000) apiError(422, "INVALID_COMMENT", "Nội dung tối đa 1000 ký tự.");
+      comment = c || undefined;
+    }
+    let imageUrls = existing.imageUrls;
+    if (b.imageUrls !== undefined) {
+      imageUrls = Array.isArray(b.imageUrls) ? b.imageUrls.slice(0, 3) : undefined;
+    }
+    const updated: ProductReviewDto = {
+      ...existing,
+      rating,
+      comment,
+      imageUrls,
+      updatedAt: new Date().toISOString(),
+    };
+    state.productReviews = [
+      ...state.productReviews.slice(0, idx),
+      updated,
+      ...state.productReviews.slice(idx + 1),
+    ];
+    recomputeProductAggregates(updated.productId);
+    save();
+    return ok(updated);
+  }
+  // DELETE /product-reviews/:reviewId
+  if (prodReviewPatchMatch && method === "DELETE") {
+    const u = requireActiveUser();
+    const reviewId = prodReviewPatchMatch[1];
+    const idx = state.productReviews.findIndex((r) => r.id === reviewId);
+    if (idx < 0) notFound("Không tìm thấy đánh giá.");
+    const existing = state.productReviews[idx];
+    if (existing.user.id !== u.id)
+      apiError(403, "REVIEW_NOT_OWNED", "Bạn không thể xoá đánh giá của người khác.");
+    state.productReviews = [
+      ...state.productReviews.slice(0, idx),
+      ...state.productReviews.slice(idx + 1),
+    ];
+    if (existing.orderItemId) {
+      state.reviewedOrderItems = state.reviewedOrderItems.filter((k) => k !== existing.orderItemId);
+    }
+    recomputeProductAggregates(existing.productId);
+    save();
+    return ok(undefined);
+  }
 
   // notifications (user)
   if (M === "GET /notifications") {

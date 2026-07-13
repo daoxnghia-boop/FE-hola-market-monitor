@@ -1,6 +1,5 @@
 import { useRequireAuth } from "@/lib/require-auth";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 import {
   ArrowLeft,
   Bike,
@@ -16,7 +15,6 @@ import { AppShell } from "@/components/app-shell";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { OrderTimeline } from "@/components/order-timeline";
 import { Button } from "@/components/ui/button";
-import { WriteProductReviewDialog } from "@/components/write-product-review-dialog";
 import { formatDateTime, formatVND } from "@/lib/domain";
 import { useCancelOrder, useOrder, useReorder } from "@/lib/orders-store";
 import { apiErrorMessage } from "@/lib/api/client";
@@ -39,9 +37,6 @@ function OrderDetailPage() {
   const cancelOrder = useCancelOrder();
   const reorder = useReorder();
   const navigate = useNavigate();
-  const [reviewTarget, setReviewTarget] = useState<
-    { productId: string; productName: string } | null
-  >(null);
 
   if (isLoading)
     return (
@@ -174,18 +169,18 @@ function OrderDetailPage() {
                               ✓ Đã đánh giá món
                             </span>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setReviewTarget({
-                                  productId: it.productId,
-                                  productName: it.productName,
-                                })
-                              }
+                            <Link
+                              to="/products/$productId"
+                              params={{ productId: it.productId }}
+                              search={{
+                                orderId: order.id,
+                                orderItemId: `${order.id}:${it.productId}`,
+                              }}
+                              hash="write-review"
                               className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
                             >
                               <Star className="size-3" /> Đánh giá món
-                            </button>
+                            </Link>
                           )}
                         </div>
                       )}
@@ -303,16 +298,6 @@ function OrderDetailPage() {
           </div>
         </aside>
       </div>
-      {reviewTarget && (
-        <WriteProductReviewDialog
-          open={!!reviewTarget}
-          onOpenChange={(v) => !v && setReviewTarget(null)}
-          orderId={order.id}
-          productId={reviewTarget.productId}
-          productName={reviewTarget.productName}
-          onSuccess={() => setReviewTarget(null)}
-        />
-      )}
     </AppShell>
   );
 }

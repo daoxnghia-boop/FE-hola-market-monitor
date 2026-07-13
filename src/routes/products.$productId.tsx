@@ -1,20 +1,19 @@
-import { useState } from "react";
-import {
-  createFileRoute,
-  Link,
-  notFound,
-  useRouter,
-} from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Bike,
   ChevronRight,
   Clock,
+  LogIn,
   MapPin,
   Minus,
+  Pencil,
   Plus,
+  ShoppingBag,
   Star,
   Store,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
@@ -22,6 +21,12 @@ import { ProductCard } from "@/components/product-card";
 import { ProductImage } from "@/components/product-image";
 import { CartConflictDialog } from "@/components/cart-conflict-dialog";
 import { RatingStars } from "@/components/rating-stars";
+import {
+  ProductReviewForm,
+  type EligibleOrderOption,
+  type ReviewFormValues,
+} from "@/components/product-review-form";
+import { DeleteReviewDialog } from "@/components/delete-review-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,25 +44,36 @@ import { catalogApi } from "@/lib/api/services";
 import {
   queryKeys,
   useAddCartItem,
+  useCreateProductReview,
+  useCurrentUser,
+  useDeleteProductReview,
   useProduct,
+  useProductReviewEligibility,
   useProductReviews,
   useProductReviewSummary,
   useProductsFromSameShop,
   useRelatedProducts,
+  useUpdateProductReview,
 } from "@/lib/api/hooks";
 import { ApiError, apiErrorMessage } from "@/lib/api/client";
 import { formatRelativeTime, formatVND } from "@/lib/domain";
 import type {
   ProductDetailDto,
   ProductRatingDistribution,
+  ProductReviewDto,
   ProductReviewSort,
 } from "@/lib/api/types";
 import { useDeliveryZone } from "@/lib/cart-store";
+import { storeRedirectIntent } from "@/lib/redirect";
 import { cn } from "@/lib/utils";
 
 const SITE = "https://hola-market.lovable.app";
 
 export const Route = createFileRoute("/products/$productId")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    orderId: typeof search.orderId === "string" ? search.orderId : undefined,
+    orderItemId: typeof search.orderItemId === "string" ? search.orderItemId : undefined,
+  }),
   loader: async ({ params, context }) => {
     try {
       const data = await context.queryClient.ensureQueryData({
@@ -75,10 +91,7 @@ export const Route = createFileRoute("/products/$productId")({
   head: ({ loaderData, params }) => {
     if (!loaderData) {
       return {
-        meta: [
-          { title: "Món ăn — HoLa Market" },
-          { name: "robots", content: "noindex" },
-        ],
+        meta: [{ title: "Món ăn — HoLa Market" }, { name: "robots", content: "noindex" }],
       };
     }
     const { product } = loaderData;
@@ -113,21 +126,13 @@ export const Route = createFileRoute("/products/$productId")({
   component: ProductDetailPage,
 });
 
-function ProductErrorComponent({
-  error,
-  reset,
-}: {
-  error: Error;
-  reset: () => void;
-}) {
+function ProductErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   return (
     <AppShell>
       <div className="mx-auto max-w-md px-4 py-16 text-center">
         <h1 className="text-xl font-bold">Không tải được món ăn</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {apiErrorMessage(error)}
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{apiErrorMessage(error)}</p>
         <div className="mt-6 flex justify-center gap-2">
           <Button
             onClick={() => {
@@ -181,7 +186,6 @@ function ProductDetailPage() {
   // Always render from loader-primed product for SSR / hydration stability.
   // Zone-scoped delivery info swaps in when the client-side query resolves.
   const product: ProductDetailDto = productQuery.data ?? loaderProduct;
-
 
   const shop = product.shop;
   const shopOperational =
@@ -335,11 +339,7 @@ function MainInfo({
           setNote("");
         },
         onError: (error) => {
-          if (
-            !replace &&
-            error instanceof ApiError &&
-            error.code === "CART_SHOP_CONFLICT"
-          ) {
+          if (!replace && error instanceof ApiError && error.code === "CART_SHOP_CONFLICT") {
             setConflictOpen(true);
             return;
           }
@@ -349,19 +349,13 @@ function MainInfo({
     );
   };
 
-  const cta = canOrder
-    ? `Thêm vào giỏ · ${formatVND(total)}`
-    : unavailableReason;
+  const cta = canOrder ? `Thêm vào giỏ · ${formatVND(total)}` : unavailableReason;
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-extrabold leading-tight md:text-3xl">
-        {product.name}
-      </h1>
+      <h1 className="text-2xl font-extrabold leading-tight md:text-3xl">{product.name}</h1>
       <div className="flex flex-wrap items-baseline gap-3">
-        <span className="text-3xl font-extrabold text-primary">
-          {formatVND(product.price)}
-        </span>
+        <span className="text-3xl font-extrabold text-primary">{formatVND(product.price)}</span>
         {product.category && (
           <Badge variant="secondary" className="rounded-full">
             {product.category.name}
@@ -371,9 +365,7 @@ function MainInfo({
       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <RatingStars value={product.rating} />
-          <span className="font-medium text-foreground">
-            {product.rating.toFixed(1)}
-          </span>
+          <span className="font-medium text-foreground">{product.rating.toFixed(1)}</span>
           <span>({product.reviewCount ?? 0} đánh giá)</span>
         </span>
         <span>· Đã bán {product.soldCount}</span>
@@ -384,9 +376,7 @@ function MainInfo({
       </div>
 
       {product.description && (
-        <p className="text-sm leading-relaxed text-foreground/90">
-          {product.description}
-        </p>
+        <p className="text-sm leading-relaxed text-foreground/90">{product.description}</p>
       )}
 
       {/* Delivery info */}
@@ -396,12 +386,7 @@ function MainInfo({
             <Bike className="size-4 text-primary" />
             Giao tới {zoneName || "khu vực đã chọn"}
           </span>
-          <span
-            className={cn(
-              "font-semibold",
-              zoneSupported ? "text-foreground" : "text-warning",
-            )}
-          >
+          <span className={cn("font-semibold", zoneSupported ? "text-foreground" : "text-warning")}>
             {zoneSupported
               ? zoneFee != null
                 ? `Phí giao ${formatVND(zoneFee)}`
@@ -472,9 +457,7 @@ function MainInfo({
         <div className="mx-auto flex max-w-[1200px] items-center gap-3">
           <div className="min-w-0">
             <div className="text-[11px] text-muted-foreground">Tổng tạm tính</div>
-            <div className="truncate text-lg font-extrabold text-primary">
-              {formatVND(total)}
-            </div>
+            <div className="truncate text-lg font-extrabold text-primary">{formatVND(total)}</div>
           </div>
           <Button
             className="ml-auto h-11 flex-1 rounded-full text-sm font-bold"
@@ -514,11 +497,7 @@ function ShopMiniCard({
     <div className="rounded-2xl bg-card p-4 shadow-card">
       <div className="flex items-start gap-3">
         {shop.logoUrl ? (
-          <img
-            src={shop.logoUrl}
-            alt=""
-            className="size-14 shrink-0 rounded-xl object-cover"
-          />
+          <img src={shop.logoUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
         ) : (
           <div className="grid size-14 shrink-0 place-items-center rounded-xl bg-muted">
             <Store className="size-6 text-muted-foreground" />
@@ -535,9 +514,7 @@ function ShopMiniCard({
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <RatingStars value={shop.rating} />
-              <span className="font-medium text-foreground">
-                {shop.rating.toFixed(1)}
-              </span>
+              <span className="font-medium text-foreground">{shop.rating.toFixed(1)}</span>
               <span>({shop.reviewCount})</span>
             </span>
             <span className="inline-flex items-center gap-1">
@@ -546,9 +523,7 @@ function ShopMiniCard({
             <span
               className={cn(
                 "inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold",
-                shop.isOpen
-                  ? "bg-success/15 text-success"
-                  : "bg-muted text-muted-foreground",
+                shop.isOpen ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
               )}
             >
               <span className="size-1.5 rounded-full bg-current" />
@@ -566,10 +541,7 @@ function ShopMiniCard({
               Giao tới {zoneName || "khu vực đã chọn"}:{" "}
             </span>
             <span
-              className={cn(
-                "font-semibold",
-                zoneSupported ? "text-foreground" : "text-warning",
-              )}
+              className={cn("font-semibold", zoneSupported ? "text-foreground" : "text-warning")}
             >
               {zoneSupported
                 ? zoneFee != null
@@ -635,13 +607,7 @@ function SameShopProducts({
   );
 }
 
-function RelatedProducts({
-  productId,
-  zoneId,
-}: {
-  productId: string;
-  zoneId?: string;
-}) {
+function RelatedProducts({ productId, zoneId }: { productId: string; zoneId?: string }) {
   const { data, isLoading } = useRelatedProducts(productId, zoneId);
   const items = data ?? [];
   if (!isLoading && items.length === 0) return null;
@@ -665,6 +631,7 @@ function RelatedProducts({
 // Reviews section
 // -----------------------------
 function ReviewsSection({ productId }: { productId: string }) {
+  const search = Route.useSearch();
   const [filterRating, setFilterRating] = useState<string>("all");
   const [sort, setSort] = useState<ProductReviewSort>("latest");
   const summaryQuery = useProductReviewSummary(productId);
@@ -695,9 +662,7 @@ function ReviewsSection({ productId }: { productId: string }) {
             {(summary?.averageRating ?? 0).toFixed(1)}
           </div>
           <RatingStars value={summary?.averageRating ?? 0} />
-          <div className="mt-1 text-xs text-muted-foreground">
-            {totalReviews} đánh giá
-          </div>
+          <div className="mt-1 text-xs text-muted-foreground">{totalReviews} đánh giá</div>
         </div>
         <div className="space-y-1.5">
           {[5, 4, 3, 2, 1].map((n) => {
@@ -716,6 +681,8 @@ function ReviewsSection({ productId }: { productId: string }) {
           })}
         </div>
       </div>
+
+      <ReviewInputPanel productId={productId} preferredOrderItemId={search.orderItemId} />
 
       {/* Filters (min-height keeps layout stable) */}
       <div className="mt-4 flex flex-wrap items-center gap-2 min-h-11">
@@ -765,15 +732,10 @@ function ReviewsSection({ productId }: { productId: string }) {
           </div>
         ) : (
           reviews.map((r) => (
-            <article
-              key={r.id}
-              className="rounded-2xl bg-card p-4 shadow-card"
-            >
+            <article key={r.id} className="rounded-2xl bg-card p-4 shadow-card">
               <header className="flex items-center gap-3">
                 <Avatar className="size-9">
-                  <AvatarFallback>
-                    {r.user.displayName.slice(0, 1).toUpperCase()}
-                  </AvatarFallback>
+                  <AvatarFallback>{r.user.displayName.slice(0, 1).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -790,9 +752,7 @@ function ReviewsSection({ productId }: { productId: string }) {
                   </div>
                 </div>
               </header>
-              {r.comment && (
-                <p className="mt-2 text-sm leading-relaxed">{r.comment}</p>
-              )}
+              {r.comment && <p className="mt-2 text-sm leading-relaxed">{r.comment}</p>}
               {r.imageUrls && r.imageUrls.length > 0 && (
                 <div className="mt-2 flex gap-2 overflow-x-auto">
                   {r.imageUrls.map((u) => (
@@ -808,9 +768,7 @@ function ReviewsSection({ productId }: { productId: string }) {
               )}
               {r.shopReply && (
                 <div className="mt-3 rounded-xl bg-muted p-3 text-sm">
-                  <div className="mb-1 text-xs font-semibold text-primary">
-                    Phản hồi từ quán
-                  </div>
+                  <div className="mb-1 text-xs font-semibold text-primary">Phản hồi từ quán</div>
                   <p className="text-foreground/90">{r.shopReply.content}</p>
                 </div>
               )}
@@ -856,4 +814,309 @@ function ProductGridSkeleton({ count }: { count: number }) {
 
 function ReviewCardSkeleton() {
   return <Skeleton className="h-24 w-full rounded-2xl" />;
+}
+
+// -----------------------------
+// Review input panel — eligibility + form + own review card
+// -----------------------------
+function ReviewInputPanel({
+  productId,
+  preferredOrderItemId,
+}: {
+  productId: string;
+  preferredOrderItemId?: string;
+}) {
+  const currentUser = useCurrentUser();
+  const eligibilityQuery = useProductReviewEligibility(productId);
+  const createReview = useCreateProductReview();
+  const updateReview = useUpdateProductReview();
+  const deleteReview = useDeleteProductReview();
+  const [editing, setEditing] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [selectedOrderItemId, setSelectedOrderItemId] = useState<string>("");
+
+  const eligibility = eligibilityQuery.data;
+
+  // Sync default selection when eligible items or preferred change.
+  useEffect(() => {
+    if (!eligibility || !eligibility.eligible) return;
+    const items = eligibility.eligibleOrderItems;
+    if (items.length === 0) return;
+    const preferred =
+      preferredOrderItemId && items.some((i) => i.orderItemId === preferredOrderItemId)
+        ? preferredOrderItemId
+        : undefined;
+    setSelectedOrderItemId((prev) => {
+      if (prev && items.some((i) => i.orderItemId === prev)) return prev;
+      return preferred ?? items[0].orderItemId;
+    });
+  }, [eligibility, preferredOrderItemId]);
+
+  // Scroll to #write-review target when reached via order-detail link.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.location.hash.includes("write-review")) return;
+    if (!eligibility) return;
+    const el = document.getElementById("write-review");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [eligibility]);
+
+  if (eligibilityQuery.isLoading) {
+    return (
+      <div className="mt-4">
+        <Skeleton className="h-24 w-full rounded-2xl" />
+      </div>
+    );
+  }
+  if (!eligibility) return null;
+
+  // Guest
+  if (!eligibility.authenticated) {
+    return (
+      <div
+        id="write-review"
+        className="mt-4 flex flex-col items-start gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-card sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex items-start gap-3">
+          <LogIn className="mt-0.5 size-5 text-primary" />
+          <p className="text-sm">Bạn cần đăng nhập để đánh giá món ăn.</p>
+        </div>
+        <Button
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              storeRedirectIntent(window.location.pathname + window.location.search);
+            }
+          }}
+          asChild
+          className="rounded-full"
+        >
+          <Link to="/login">Đăng nhập để đánh giá</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // Already reviewed
+  if (eligibility.existingReview) {
+    const r = eligibility.existingReview;
+    return (
+      <div id="write-review" className="mt-4">
+        <ExistingReviewCard
+          review={r}
+          currentUserName={currentUser?.fullName ?? r.user.displayName}
+          editing={editing}
+          onStartEdit={() => setEditing(true)}
+          onCancelEdit={() => setEditing(false)}
+          onSaveEdit={(v) =>
+            updateReview.mutate(
+              {
+                reviewId: r.id,
+                productId,
+                orderId: r.orderId,
+                body: v,
+              },
+              {
+                onSuccess: () => {
+                  toast.success("Đã cập nhật đánh giá", { description: r.orderId });
+                  setEditing(false);
+                },
+                onError: (e) =>
+                  toast.error("Không cập nhật được đánh giá", {
+                    description: apiErrorMessage(e),
+                  }),
+              },
+            )
+          }
+          saving={updateReview.isPending}
+          onRequestDelete={() => setDeleteOpen(true)}
+        />
+        <DeleteReviewDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          disabled={deleteReview.isPending}
+          onConfirm={() =>
+            deleteReview.mutate(
+              { reviewId: r.id, productId, orderId: r.orderId },
+              {
+                onSuccess: () => {
+                  toast.success("Đã xoá đánh giá");
+                  setDeleteOpen(false);
+                },
+                onError: (e) =>
+                  toast.error("Không xoá được đánh giá", {
+                    description: apiErrorMessage(e),
+                  }),
+              },
+            )
+          }
+        />
+      </div>
+    );
+  }
+
+  // Not purchased
+  if (eligibility.reason === "not_purchased") {
+    return (
+      <div
+        id="write-review"
+        className="mt-4 flex flex-col items-start gap-2 rounded-2xl border border-dashed border-border p-4 text-sm sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex items-start gap-2">
+          <ShoppingBag className="mt-0.5 size-5 text-muted-foreground" />
+          <p>Bạn chỉ có thể đánh giá món này sau khi đã đặt và hoàn thành đơn hàng.</p>
+        </div>
+        <Button variant="outline" asChild className="rounded-full">
+          <Link to="/orders">Xem đơn hàng của tôi</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // Order pending / not completed
+  if (eligibility.reason === "order_not_completed") {
+    return (
+      <div
+        id="write-review"
+        className="mt-4 rounded-2xl border border-dashed border-border p-4 text-sm"
+      >
+        <p>Bạn có thể đánh giá món này sau khi đơn hàng được hoàn thành.</p>
+        {eligibility.pendingOrder && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Đơn liên quan: #{eligibility.pendingOrder.orderCode} · trạng thái{" "}
+            {eligibility.pendingOrder.status.replace(/_/g, " ")}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Eligible: show form
+  const eligibleItems: EligibleOrderOption[] = eligibility.eligibleOrderItems;
+  const submit = (values: ReviewFormValues) => {
+    const chosen =
+      eligibleItems.find((i) => i.orderItemId === selectedOrderItemId) ?? eligibleItems[0];
+    if (!chosen) return;
+    createReview.mutate(
+      {
+        orderId: chosen.orderId,
+        productId,
+        orderItemId: chosen.orderItemId,
+        rating: values.rating,
+        comment: values.comment,
+        imageUrls: values.imageUrls,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Cảm ơn bạn đã đánh giá!");
+          // Scroll to "Đánh giá của bạn"
+          setTimeout(() => {
+            document
+              .getElementById("write-review")
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 100);
+        },
+        onError: (e) =>
+          toast.error("Không gửi được đánh giá", {
+            description: apiErrorMessage(e),
+          }),
+      },
+    );
+  };
+
+  return (
+    <div
+      id="write-review"
+      className="mt-4 rounded-2xl border border-border/70 bg-card p-4 shadow-card"
+    >
+      <h3 className="mb-3 text-sm font-bold">Đánh giá của bạn về món này</h3>
+      <ProductReviewForm
+        mode="create"
+        eligibleOrders={eligibleItems}
+        selectedOrderItemId={selectedOrderItemId}
+        onSelectedOrderItemChange={setSelectedOrderItemId}
+        submitting={createReview.isPending}
+        onSubmit={submit}
+      />
+    </div>
+  );
+}
+
+function ExistingReviewCard({
+  review,
+  currentUserName,
+  editing,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  saving,
+  onRequestDelete,
+}: {
+  review: ProductReviewDto;
+  currentUserName: string;
+  editing: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (v: ReviewFormValues) => void;
+  saving: boolean;
+  onRequestDelete: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-sm font-bold text-primary">Đánh giá của bạn</h3>
+        {!editing && (
+          <div className="flex items-center gap-1">
+            <Button size="sm" variant="ghost" onClick={onStartEdit} className="h-8">
+              <Pencil className="size-3.5" /> Chỉnh sửa
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onRequestDelete}
+              className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" /> Xoá đánh giá
+            </Button>
+          </div>
+        )}
+      </div>
+      {editing ? (
+        <ProductReviewForm
+          mode="edit"
+          initialRating={review.rating}
+          initialComment={review.comment}
+          initialImageUrls={review.imageUrls}
+          submitting={saving}
+          onSubmit={onSaveEdit}
+          onCancel={onCancelEdit}
+          submitLabel="Lưu thay đổi"
+        />
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{currentUserName}</span>
+            <RatingStars value={review.rating} />
+            <span className="text-xs text-muted-foreground">
+              {formatRelativeTime(review.updatedAt ?? review.createdAt)}
+              {review.updatedAt ? " · đã chỉnh sửa" : ""}
+            </span>
+          </div>
+          {review.comment && <p className="text-sm leading-relaxed">{review.comment}</p>}
+          {review.imageUrls && review.imageUrls.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto">
+              {review.imageUrls.map((u) => (
+                <img
+                  key={u}
+                  src={u}
+                  alt=""
+                  loading="lazy"
+                  className="size-20 shrink-0 rounded-lg object-cover"
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
