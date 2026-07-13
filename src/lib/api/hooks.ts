@@ -532,6 +532,7 @@ export function useAdminZoneMutations() {
         adminApi.updateZone(v.id, v.body),
       onSuccess: invalidate,
     }),
+    remove: useMutation({ mutationFn: (id: string) => adminApi.deleteZone(id), onSuccess: invalidate }),
   };
 }
 
