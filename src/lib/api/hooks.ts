@@ -31,8 +31,10 @@ export const queryKeys = {
   popular: (zoneId?: string) => ["popular-products", zoneId] as const,
   product: (id: string, zoneId?: string) => ["product", id, zoneId] as const,
   productReviews: (id: string, params: ProductReviewListParams) =>
-    ["product", id, "reviews", params] as const,
-  productReviewSummary: (id: string) => ["product", id, "review-summary"] as const,
+    ["product-reviews", id, params] as const,
+  productReviewSummary: (id: string) => ["product-review-summary", id] as const,
+  productReviewEligibility: (id: string) =>
+    ["product-review-eligibility", id] as const,
   productRelated: (id: string, zoneId?: string) => ["product", id, "related", zoneId] as const,
   productSameShop: (id: string, zoneId?: string) => ["product", id, "same-shop", zoneId] as const,
   search: (params: unknown) => ["search", params] as const,
