@@ -202,9 +202,13 @@ function AdminZones() {
                       onCheckedChange={async (v) => {
                         try {
                           await update.mutateAsync({ id: z.id, body: { active: v } });
-                          toast.success("Đã cập nhật.");
+                          toast.success(v ? "Đã bật khu vực" : "Đã tắt khu vực", {
+                            description: z.name,
+                          });
                         } catch (e) {
-                          toast.error(apiErrorMessage(e));
+                          toast.error("Cập nhật khu vực thất bại", {
+                            description: apiErrorMessage(e),
+                          });
                         }
                       }}
                     />
