@@ -223,9 +223,13 @@ function paginate<T>(list: T[], pageSize?: string) {
 function recomputeCart(cart: CartDto): CartDto {
   const subtotal = cart.items.reduce((n, it) => n + it.lineTotal, 0);
   const zone = cart.deliveryZone;
-  const deliveryFee = zone ? zone.baseDeliveryFee : 0;
+  const shop = cart.shop;
+  // Delivery fee is per-shop-per-zone. Fallback to zone base when quán chưa khai riêng.
+  const perShopFee = shop && zone ? shopDeliveryFee(shop, zone) : null;
+  const deliveryFee = perShopFee ?? (zone && !shop ? zone.baseDeliveryFee : 0);
   let discount = 0;
   const reasons: string[] = [];
+
   if (cart.voucher) {
     const v = cart.voucher;
     if (subtotal < v.minOrderAmount) {
