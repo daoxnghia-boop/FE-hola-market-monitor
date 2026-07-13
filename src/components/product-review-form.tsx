@@ -124,10 +124,7 @@ export function ProductReviewForm({
       {eligibleOrders && eligibleOrders.length > 1 && selectedOrderItemId && (
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Đánh giá cho lần mua</label>
-          <Select
-            value={selectedOrderItemId}
-            onValueChange={(v) => onSelectedOrderItemChange?.(v)}
-          >
+          <Select value={selectedOrderItemId} onValueChange={(v) => onSelectedOrderItemChange?.(v)}>
             <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
@@ -168,9 +165,7 @@ export function ProductReviewForm({
               <Star
                 className={cn(
                   "size-8",
-                  n <= displayRating
-                    ? "fill-warning text-warning"
-                    : "text-muted-foreground/40",
+                  n <= displayRating ? "fill-warning text-warning" : "text-muted-foreground/40",
                 )}
               />
             </button>
@@ -212,9 +207,7 @@ export function ProductReviewForm({
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium">
-          Ảnh (không bắt buộc, tối đa {MAX_IMAGES})
-        </label>
+        <label className="text-sm font-medium">Ảnh (không bắt buộc, tối đa {MAX_IMAGES})</label>
         {imageUrls.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {imageUrls.map((u, i) => (
@@ -264,19 +257,12 @@ export function ProductReviewForm({
             </Button>
           </div>
         )}
-        {errors.image && (
-          <p className="text-[11px] text-destructive">{errors.image}</p>
-        )}
+        {errors.image && <p className="text-[11px] text-destructive">{errors.image}</p>}
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
         {onCancel && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={submitting}
-          >
+          <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
             Huỷ
           </Button>
         )}

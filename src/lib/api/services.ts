@@ -93,13 +93,8 @@ export const catalogApi = {
   productReviewSummary: (productId: string) =>
     apiRequest<ProductReviewSummaryDto>(`/products/${productId}/review-summary`),
   productReviewEligibility: (productId: string) =>
-    apiRequest<ProductReviewEligibilityDto>(
-      `/products/${productId}/review-eligibility`,
-    ),
-  relatedProducts: (
-    productId: string,
-    opts: { deliveryZoneId?: string; limit?: number } = {},
-  ) =>
+    apiRequest<ProductReviewEligibilityDto>(`/products/${productId}/review-eligibility`),
+  relatedProducts: (productId: string, opts: { deliveryZoneId?: string; limit?: number } = {}) =>
     apiRequest<{ items: ProductDto[] }>(`/products/${productId}/related`, {
       query: { deliveryZoneId: opts.deliveryZoneId, limit: opts.limit },
     }),
@@ -169,15 +164,11 @@ export const orderApi = {
 export const reviewApi = {
   create: (orderId: string, body: { rating: number; comment?: string }) =>
     apiRequest<ReviewDto>(`/orders/${orderId}/review`, { method: "POST", body }),
-  createProductReview: (
-    orderId: string,
-    productId: string,
-    body: ProductReviewCreateInput,
-  ) =>
-    apiRequest<ProductReviewDto>(
-      `/orders/${orderId}/items/${productId}/review`,
-      { method: "POST", body },
-    ),
+  createProductReview: (orderId: string, productId: string, body: ProductReviewCreateInput) =>
+    apiRequest<ProductReviewDto>(`/orders/${orderId}/items/${productId}/review`, {
+      method: "POST",
+      body,
+    }),
   updateProductReview: (reviewId: string, body: ProductReviewUpdateInput) =>
     apiRequest<ProductReviewDto>(`/product-reviews/${reviewId}`, {
       method: "PATCH",
@@ -249,8 +240,7 @@ export const adminApi = {
     apiRequest<DeliveryZoneDto>("/admin/delivery-zones", { method: "POST", body }),
   updateZone: (id: string, body: Partial<DeliveryZoneDto>) =>
     apiRequest<DeliveryZoneDto>(`/admin/delivery-zones/${id}`, { method: "PATCH", body }),
-  deleteZone: (id: string) =>
-    apiRequest<void>(`/admin/delivery-zones/${id}`, { method: "DELETE" }),
+  deleteZone: (id: string) => apiRequest<void>(`/admin/delivery-zones/${id}`, { method: "DELETE" }),
 };
 
 // ==================== SHOP OWNER ====================

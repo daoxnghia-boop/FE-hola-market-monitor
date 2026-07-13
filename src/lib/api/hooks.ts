@@ -33,8 +33,7 @@ export const queryKeys = {
   productReviews: (id: string, params: ProductReviewListParams) =>
     ["product-reviews", id, params] as const,
   productReviewSummary: (id: string) => ["product-review-summary", id] as const,
-  productReviewEligibility: (id: string) =>
-    ["product-review-eligibility", id] as const,
+  productReviewEligibility: (id: string) => ["product-review-eligibility", id] as const,
   productRelated: (id: string, zoneId?: string) => ["product", id, "related", zoneId] as const,
   productSameShop: (id: string, zoneId?: string) => ["product", id, "same-shop", zoneId] as const,
   search: (params: unknown) => ["search", params] as const,
@@ -140,10 +139,7 @@ export function useProduct(productId: string, zoneId?: string) {
     retry: false,
   });
 }
-export function useProductReviews(
-  productId: string,
-  params: ProductReviewListParams = {},
-) {
+export function useProductReviews(productId: string, params: ProductReviewListParams = {}) {
   return useQuery({
     queryKey: queryKeys.productReviews(productId, params),
     queryFn: () => catalogApi.productReviews(productId, params),
@@ -171,8 +167,7 @@ export function useRelatedProducts(productId: string, zoneId?: string, limit = 8
 export function useProductsFromSameShop(productId: string, zoneId?: string, limit = 8) {
   return useQuery({
     queryKey: queryKeys.productSameShop(productId, zoneId),
-    queryFn: () =>
-      catalogApi.productsFromSameShop(productId, { deliveryZoneId: zoneId, limit }),
+    queryFn: () => catalogApi.productsFromSameShop(productId, { deliveryZoneId: zoneId, limit }),
     select: (d) => d.items,
     enabled: Boolean(productId),
     retry: false,
@@ -664,7 +659,10 @@ export function useAdminZoneMutations() {
         adminApi.updateZone(v.id, v.body),
       onSuccess: invalidate,
     }),
-    remove: useMutation({ mutationFn: (id: string) => adminApi.deleteZone(id), onSuccess: invalidate }),
+    remove: useMutation({
+      mutationFn: (id: string) => adminApi.deleteZone(id),
+      onSuccess: invalidate,
+    }),
   };
 }
 

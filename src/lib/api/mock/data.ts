@@ -70,7 +70,6 @@ const PRODUCT_IMAGES: Record<string, string> = {
 export const productImage = (productId: string): string =>
   PRODUCT_IMAGES[productId] ?? img(`food-${productId}`);
 
-
 export const shops: ShopDto[] = [
   {
     id: "s1",
@@ -739,13 +738,21 @@ const rev = (
   comment,
   verifiedPurchase: true,
   createdAt: daysAgo(daysAgoN),
-  shopReply: reply
-    ? { content: reply, createdAt: daysAgo(Math.max(0, daysAgoN - 1)) }
-    : undefined,
+  shopReply: reply ? { content: reply, createdAt: daysAgo(Math.max(0, daysAgoN - 1)) } : undefined,
 });
 
 export const seedProductReviews: ProductReviewDto[] = [
-  rev("pr1", "p1", "s1", "o-seed-r1", "Minh Anh", 5, 6, "Cơm nóng, sườn thơm, ăn đã đời!", "Cảm ơn bạn nhiều nhé!"),
+  rev(
+    "pr1",
+    "p1",
+    "s1",
+    "o-seed-r1",
+    "Minh Anh",
+    5,
+    6,
+    "Cơm nóng, sườn thơm, ăn đã đời!",
+    "Cảm ơn bạn nhiều nhé!",
+  ),
   rev("pr2", "p1", "s1", "o-seed-r2", "Hà Trang", 4, 5, "Sườn ngon nhưng canh hơi nhạt."),
   rev("pr3", "p1", "s1", "o-seed-r3", "Đức Anh", 5, 3, "Ship nhanh, còn nóng hổi."),
   rev("pr4", "p2", "s1", "o-seed-r4", "Ngọc Lan", 5, 4, "Gà rán giòn tan, giá hợp lý."),

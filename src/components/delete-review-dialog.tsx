@@ -25,9 +25,7 @@ export function DeleteReviewDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Xoá đánh giá này?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Đánh giá và hình ảnh đính kèm sẽ bị xoá.
-          </AlertDialogDescription>
+          <AlertDialogDescription>Đánh giá và hình ảnh đính kèm sẽ bị xoá.</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={disabled}>Huỷ</AlertDialogCancel>

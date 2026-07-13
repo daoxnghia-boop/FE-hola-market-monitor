@@ -61,7 +61,6 @@ export type ShopDto = {
   deliveryFees?: Record<string, number>;
 };
 
-
 export type ShopRegistrationInput = {
   name: string;
   slug?: string;
@@ -143,7 +142,6 @@ export type ProductReviewDto = {
   shopReply?: { content: string; createdAt: string };
 };
 
-
 export type ProductRatingDistribution = {
   1: number;
   2: number;
@@ -202,7 +200,6 @@ export type ProductReviewEligibilityDto = {
   pendingOrder?: { orderId: string; orderCode: string; status: OrderStatus };
   existingReview?: ProductReviewDto;
 };
-
 
 export type VoucherStatus =
   | "usable"

@@ -38,7 +38,6 @@ function OrderDetailPage() {
   const reorder = useReorder();
   const navigate = useNavigate();
 
-
   if (isLoading)
     return (
       <AppShell>
