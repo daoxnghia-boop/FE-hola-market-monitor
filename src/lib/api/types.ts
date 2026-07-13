@@ -305,3 +305,28 @@ export type AdminUserSummaryDto = UserDto & {
   orderCount: number;
   totalSpending: number;
 };
+
+// Shop Owner DTOs
+export type ProductInput = {
+  shopId: string;
+  name: string;
+  price: number;
+  description?: string;
+  imageUrl?: string;
+  categoryId: string;
+  available?: boolean;
+  prepTimeMinutes?: number;
+};
+
+export type ShopOwnerStatsDto = {
+  totalShops: number;
+  approvedShops: number;
+  pendingShops: number;
+  activeProducts: number;
+  ordersToday: number;
+  revenueToday: number;
+  pendingOrders: number;
+  ordersByStatus: Array<{ status: OrderStatus; count: number }>;
+  latestOrders: OrderSummaryDto[];
+};
+

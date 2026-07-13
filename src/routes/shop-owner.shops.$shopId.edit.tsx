@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,7 +68,7 @@ function EditShopPage() {
   };
 
   return (
-    <AppShell>
+    
       <div className="px-4 py-5">
         <div className="mb-4 flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild>
@@ -121,7 +120,7 @@ function EditShopPage() {
           </form>
         )}
       </div>
-    </AppShell>
+    
   );
 }
 

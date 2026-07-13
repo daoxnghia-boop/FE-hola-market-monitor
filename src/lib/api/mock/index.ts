@@ -3,17 +3,17 @@ import type {
   AddressDto, AdminAuditDto, AdminStatsDto, AdminUserSummaryDto,
   CartDto, CartItemDto, CategoryDto, DeliveryZoneDto,
   NotificationDto, OrderDetailDto, OrderSummaryDto, OrderStatus,
-  ProductDto, ReviewDto, SessionDto, ShopDto, UserDto, VoucherDto,
+  ProductDto, ProductInput, ReviewDto, SessionDto, ShopDto, ShopOwnerStatsDto, UserDto, VoucherDto,
 } from "../types";
 import {
-  categories as seedCategories, defaultAddresses, defaultUser, products,
+  categories as seedCategories, defaultAddresses, defaultUser, products as seedProducts,
   seedNotifications, seedOrders, seedReviews, seedUsers, shops as seedShops,
   vouchers as seedVouchers, zones as seedZones,
 } from "./data";
 
 type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
-const STORAGE_KEY = "hola-mock-state-v3";
+const STORAGE_KEY = "hola-mock-state-v4";
 
 type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
 
@@ -29,6 +29,7 @@ type State = {
   notifications: NotificationDto[];
   reviews: ReviewDto[];
   shops: ShopDto[];
+  products: ProductDto[];
   categories: CategoryDto[];
   zones: DeliveryZoneDto[];
   audits: AdminAuditDto[];
@@ -54,6 +55,7 @@ const initialState = (): State => ({
   notifications: [...seedNotifications],
   reviews: [...seedReviews],
   shops: seedShops.map((s) => ({ ...s })),
+  products: seedProducts.map((p) => ({ ...p })),
   categories: seedCategories.map((c) => ({ ...c })),
   zones: seedZones.map((z) => ({ ...z })),
   audits: [],
@@ -322,7 +324,7 @@ async function route(ctx: Ctx): Promise<unknown> {
   if (M === "GET /users/me/frequent-products") {
     requireAuthenticated();
     const limit = Number(query.limit ?? 4);
-    return ok({ items: products.slice(0, limit) });
+    return ok({ items: state.products.slice(0, limit) });
   }
   const favMatch = path.match(/^\/users\/me\/favorite-shops\/(.+)$/);
   if (favMatch) {
@@ -361,24 +363,24 @@ async function route(ctx: Ctx): Promise<unknown> {
   const shopProdMatch = path.match(/^\/shops\/([^/]+)\/products$/);
   if (shopProdMatch && method === "GET") {
     const shopId = shopProdMatch[1];
-    let list = products.filter((p) => p.shopId === shopId);
+    let list = state.products.filter((p) => p.shopId === shopId);
     if (query.categoryId) list = list.filter((p) => p.categoryId === query.categoryId);
     return ok(paginate(list, query.pageSize));
   }
   if (M === "GET /products") {
-    let list = [...products];
+    let list = [...state.products];
     if (query.categoryId) list = list.filter((p) => p.categoryId === query.categoryId);
     return ok(paginate(list, query.pageSize));
   }
   const prodMatch = path.match(/^\/products\/([^/]+)$/);
   if (prodMatch && method === "GET") {
-    const p = products.find((x) => x.id === prodMatch[1]);
+    const p = state.products.find((x) => x.id === prodMatch[1]);
     if (!p) notFound("Không tìm thấy sản phẩm.");
     return ok(p);
   }
   if (M === "GET /products/popular") {
     const limit = Number(query.limit ?? 6);
-    return ok({ items: [...products].sort((a, b) => b.soldCount - a.soldCount).slice(0, limit) });
+    return ok({ items: [...state.products].sort((a, b) => b.soldCount - a.soldCount).slice(0, limit) });
   }
   if (M === "GET /search") {
     const q = (query.q ?? "").toLowerCase().trim();
@@ -388,7 +390,7 @@ async function route(ctx: Ctx): Promise<unknown> {
           (s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q)))
       : [];
     const matchProducts = q
-      ? products.filter((p) => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q))
+      ? state.products.filter((p) => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q))
       : [];
     return ok({
       shops: { items: kind === "products" ? [] : matchShops.map((s) => decorateShop(s, query.deliveryZoneId)), total: matchShops.length },
@@ -407,7 +409,7 @@ async function route(ctx: Ctx): Promise<unknown> {
   if (M === "GET /cart") return ok(state.cart);
   if (M === "POST /cart/items") {
     const b = body as { productId: string; quantity: number; note?: string; replaceExistingCart?: boolean };
-    const p = products.find((x) => x.id === b.productId);
+    const p = state.products.find((x) => x.id === b.productId);
     if (!p) notFound("Không tìm thấy món.");
     const shop = state.shops.find((s) => s.id === p!.shopId)!;
     if (state.cart.shop && state.cart.shop.id !== shop.id && !b.replaceExistingCart) {
@@ -553,7 +555,7 @@ async function route(ctx: Ctx): Promise<unknown> {
       deliveryZone: state.zones.find((z) => z.id === state.browsingZoneId) ?? null };
     const skipped: Array<{ productId: string; reason: string }> = [];
     for (const it of o!.items) {
-      const p = products.find((x) => x.id === it.productId);
+      const p = state.products.find((x) => x.id === it.productId);
       if (!p) { skipped.push({ productId: it.productId, reason: "Món không còn bán." }); continue; }
       cart.items.push(makeCartItem(p, it.quantity, it.note));
     }
@@ -708,7 +710,167 @@ async function route(ctx: Ctx): Promise<unknown> {
     }
   }
 
-  // ============ ADMIN ============
+  // ============ SHOP OWNER: STATS ============
+  if (M === "GET /shop-owner/stats") {
+    const u = requireShopOwner();
+    const myShops = state.shops.filter((s) => s.ownerId === u.id);
+    const shopIds = new Set(myShops.map((s) => s.id));
+    const myOrders = state.orders.filter((o) => shopIds.has(o.shopId));
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const today = myOrders.filter((o) => new Date(o.placedAt).getTime() >= startOfToday.getTime());
+    const stats: ShopOwnerStatsDto = {
+      totalShops: myShops.length,
+      approvedShops: myShops.filter((s) => s.approvalStatus === "approved").length,
+      pendingShops: myShops.filter((s) => s.approvalStatus === "pending").length,
+      activeProducts: state.products.filter((p) => shopIds.has(p.shopId) && p.available).length,
+      ordersToday: today.length,
+      revenueToday: today.filter((o) => o.status !== "da_huy").reduce((n, o) => n + o.total, 0),
+      pendingOrders: myOrders.filter((o) => o.status === "cho_quan_xac_nhan" || o.status === "quan_da_xac_nhan" || o.status === "dang_chuan_bi").length,
+      ordersByStatus: (["cho_quan_xac_nhan","quan_da_xac_nhan","dang_chuan_bi","dang_giao","hoan_thanh","da_huy"] as OrderStatus[])
+        .map((s) => ({ status: s, count: myOrders.filter((o) => o.status === s).length })),
+      latestOrders: [...myOrders]
+        .sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime())
+        .slice(0, 6).map(summarize),
+    };
+    return ok(stats);
+  }
+
+  // ============ SHOP OWNER: PRODUCTS ============
+  if (M === "GET /shop-owner/products") {
+    const u = requireShopOwner();
+    const myShopIds = new Set(state.shops.filter((s) => s.ownerId === u.id).map((s) => s.id));
+    let list = state.products.filter((p) => myShopIds.has(p.shopId));
+    if (query.shopId) {
+      if (!myShopIds.has(query.shopId) && u.role !== "admin") forbidden("Bạn không sở hữu quán này.");
+      list = list.filter((p) => p.shopId === query.shopId);
+    }
+    const q = (query.q ?? "").toLowerCase();
+    if (q) list = list.filter((p) => p.name.toLowerCase().includes(q));
+    if (query.categoryId) list = list.filter((p) => p.categoryId === query.categoryId);
+    return ok({ items: list, nextCursor: null });
+  }
+  if (M === "POST /shop-owner/products") {
+    const b = body as ProductInput;
+    if (!b?.shopId) badRequest("SHOP_REQUIRED", "Thiếu quán.");
+    const { shop } = requireShopOwnership(b.shopId);
+    if (!b.name?.trim()) badRequest("INVALID_NAME", "Vui lòng nhập tên món.");
+    if (!(b.price > 0)) badRequest("INVALID_PRICE", "Giá phải lớn hơn 0.");
+    if (!b.categoryId) badRequest("CATEGORY_REQUIRED", "Chọn danh mục.");
+    const slug = b.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const p: ProductDto = {
+      id: `p-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+      shopId: shop.id,
+      name: b.name.trim(),
+      price: Math.floor(b.price),
+      description: b.description ?? "",
+      imageUrl: b.imageUrl || `https://picsum.photos/seed/${slug || "food"}-${Date.now()}/400/400`,
+      categoryId: b.categoryId,
+      available: b.available !== false,
+      prepTimeMinutes: b.prepTimeMinutes ?? shop.prepTimeMinutes ?? 10,
+      rating: 0, reviewCount: 0, soldCount: 0,
+    };
+    state.products = [p, ...state.products];
+    save(); return ok(p);
+  }
+  const ownerProdMatch = path.match(/^\/shop-owner\/products\/([^/]+)$/);
+  if (ownerProdMatch) {
+    const p = state.products.find((x) => x.id === ownerProdMatch[1]);
+    if (!p) notFound("Không tìm thấy món.");
+    requireShopOwnership(p!.shopId);
+    if (method === "GET") return ok(p);
+    if (method === "PATCH") {
+      const b = body as Partial<ProductInput & { available: boolean }>;
+      if (b.price !== undefined && !(b.price > 0)) badRequest("INVALID_PRICE", "Giá phải lớn hơn 0.");
+      if (b.name !== undefined && !b.name.trim()) badRequest("INVALID_NAME", "Tên món không được trống.");
+      Object.assign(p!, {
+        ...b,
+        name: b.name?.trim() ?? p!.name,
+        price: b.price !== undefined ? Math.floor(b.price) : p!.price,
+      });
+      // Ownership immutable
+      p!.shopId = p!.shopId;
+      save(); return ok(p);
+    }
+    if (method === "DELETE") {
+      const usedInOrder = state.orders.some((o) => o.items.some((it) => it.productId === p!.id));
+      if (usedInOrder) conflict("PRODUCT_HAS_ORDERS", "Món đã có trong đơn hàng — hãy tắt bán thay vì xoá.");
+      state.products = state.products.filter((x) => x.id !== p!.id);
+      save(); return ok(undefined);
+    }
+  }
+
+  // ============ SHOP OWNER: ORDERS ============
+  if (M === "GET /shop-owner/orders") {
+    const u = requireShopOwner();
+    const myShopIds = new Set(state.shops.filter((s) => s.ownerId === u.id).map((s) => s.id));
+    let list = state.orders.filter((o) => myShopIds.has(o.shopId));
+    if (query.shopId) list = list.filter((o) => o.shopId === query.shopId);
+    if (query.status) list = list.filter((o) => o.status === query.status);
+    const q = (query.q ?? "").toLowerCase();
+    if (q) list = list.filter((o) =>
+      o.displayCode.toLowerCase().includes(q) ||
+      (o.customerPhone ?? "").includes(q) ||
+      (o.customerName ?? "").toLowerCase().includes(q));
+    list.sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime());
+    return ok({ items: list.map(summarize), nextCursor: null });
+  }
+  const ownerOrderMatch = path.match(/^\/shop-owner\/orders\/([^/]+)$/);
+  if (ownerOrderMatch && method === "GET") {
+    const o = state.orders.find((x) => x.id === ownerOrderMatch[1]);
+    if (!o) notFound();
+    requireShopOwnership(o!.shopId);
+    return ok(o);
+  }
+  const ownerAdvance = path.match(/^\/shop-owner\/orders\/([^/]+)\/advance$/);
+  if (ownerAdvance && method === "POST") {
+    const o = state.orders.find((x) => x.id === ownerAdvance[1]);
+    if (!o) notFound();
+    requireShopOwnership(o!.shopId);
+    const flow: OrderStatus[] = ["cho_quan_xac_nhan","quan_da_xac_nhan","dang_chuan_bi","dang_giao","hoan_thanh"];
+    const idx = flow.indexOf(o!.status);
+    if (o!.status === "hoan_thanh" || o!.status === "da_huy") conflict("ORDER_LOCKED", "Đơn đã kết thúc, không thể cập nhật.");
+    const next = idx >= 0 && idx < flow.length - 1 ? flow[idx + 1] : (o!.status === "da_dat" ? "cho_quan_xac_nhan" : o!.status);
+    const now = new Date().toISOString();
+    o!.status = next;
+    o!.canCancel = next === "cho_quan_xac_nhan" || next === "quan_da_xac_nhan";
+    o!.canReview = next === "hoan_thanh";
+    o!.statusHistory = [...o!.statusHistory, { status: next, occurredAt: now }];
+    if (o!.customerId) {
+      state.notifications = [
+        { id: `n-so-${o!.id}-${next}`, type: "order",
+          title: "Cập nhật đơn hàng",
+          body: `Đơn ${o!.displayCode} đã chuyển sang ${next}.`,
+          createdAt: now, readAt: null, target: { type: "order", id: o!.id }, userId: o!.customerId },
+        ...state.notifications,
+      ];
+    }
+    save(); return ok(o);
+  }
+  const ownerCancel = path.match(/^\/shop-owner\/orders\/([^/]+)\/cancel$/);
+  if (ownerCancel && method === "POST") {
+    const o = state.orders.find((x) => x.id === ownerCancel[1]);
+    if (!o) notFound();
+    const { user } = requireShopOwnership(o!.shopId);
+    const b = (body ?? {}) as { reason?: string };
+    if (!b.reason?.trim()) badRequest("REASON_REQUIRED", "Vui lòng nhập lý do hủy.");
+    if (o!.status === "dang_giao" || o!.status === "hoan_thanh" || o!.status === "da_huy") {
+      conflict("ORDER_LOCKED", "Không thể hủy đơn ở trạng thái hiện tại.");
+    }
+    const now = new Date().toISOString();
+    o!.status = "da_huy"; o!.canCancel = false; o!.canReview = false;
+    o!.cancellation = { reason: b.reason, canceledAt: now, canceledBy: `shop:${user.fullName}` };
+    o!.statusHistory = [...o!.statusHistory, { status: "da_huy", occurredAt: now, note: b.reason }];
+    if (o!.customerId) {
+      state.notifications = [
+        { id: `n-soc-${o!.id}`, type: "order", title: "Quán đã hủy đơn",
+          body: `Đơn ${o!.displayCode} bị hủy. Lý do: ${b.reason}`,
+          createdAt: now, readAt: null, target: { type: "order", id: o!.id }, userId: o!.customerId },
+        ...state.notifications,
+      ];
+    }
+    save(); return ok(o);
+  }
+
   if (path.startsWith("/admin/") || path === "/admin") {
     const admin = requireAdmin();
 

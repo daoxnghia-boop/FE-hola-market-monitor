@@ -373,9 +373,76 @@ export function firstActiveZone(zones?: DeliveryZoneDto[]) {
 
 // ==================== SHOP OWNER HOOKS ====================
 export const ownerKeys = {
+  stats: ["owner", "stats"] as const,
   shops: ["owner", "shops"] as const,
   shop: (id: string) => ["owner", "shop", id] as const,
+  products: (params: unknown) => ["owner", "products", params] as const,
+  product: (id: string) => ["owner", "product", id] as const,
+  orders: (params: unknown) => ["owner", "orders", params] as const,
+  order: (id: string) => ["owner", "order", id] as const,
 };
+
+export function useOwnerStats() {
+  return useQuery({ queryKey: ownerKeys.stats, queryFn: shopOwnerApi.stats, retry: false });
+}
+export function useOwnerProducts(params: Record<string, unknown> = {}) {
+  return useQuery({ queryKey: ownerKeys.products(params), queryFn: () => shopOwnerApi.products(params), select: (d) => d.items, retry: false });
+}
+export function useOwnerProduct(id: string) {
+  return useQuery({ queryKey: ownerKeys.product(id), queryFn: () => shopOwnerApi.product(id), enabled: Boolean(id), retry: false });
+}
+export function useOwnerProductMutations() {
+  const client = useQueryClient();
+  const invalidate = () => {
+    client.invalidateQueries({ queryKey: ["owner", "products"] });
+    client.invalidateQueries({ queryKey: ["owner", "product"] });
+    client.invalidateQueries({ queryKey: ["owner", "stats"] });
+    client.invalidateQueries({ queryKey: ["shop-products"] });
+    client.invalidateQueries({ queryKey: ["products"] });
+    client.invalidateQueries({ queryKey: ["popular-products"] });
+  };
+  return {
+    create: useMutation({ mutationFn: shopOwnerApi.createProduct, onSuccess: invalidate }),
+    update: useMutation({
+      mutationFn: (v: { id: string; body: Partial<import("./types").ProductInput> & { available?: boolean } }) =>
+        shopOwnerApi.updateProduct(v.id, v.body),
+      onSuccess: invalidate,
+    }),
+    remove: useMutation({ mutationFn: (id: string) => shopOwnerApi.removeProduct(id), onSuccess: invalidate }),
+  };
+}
+
+export function useOwnerOrders(params: Record<string, unknown> = {}) {
+  return useQuery({ queryKey: ownerKeys.orders(params), queryFn: () => shopOwnerApi.orders(params), select: (d) => d.items, retry: false });
+}
+export function useOwnerOrder(id: string) {
+  return useQuery({
+    queryKey: ownerKeys.order(id), queryFn: () => shopOwnerApi.order(id),
+    enabled: Boolean(id), retry: false,
+    refetchInterval: (q) => {
+      const status = q.state.data?.status;
+      return status && status !== "hoan_thanh" && status !== "da_huy" ? 15_000 : false;
+    },
+  });
+}
+export function useOwnerOrderMutations() {
+  const client = useQueryClient();
+  const invalidate = () => {
+    client.invalidateQueries({ queryKey: ["owner", "orders"] });
+    client.invalidateQueries({ queryKey: ["owner", "order"] });
+    client.invalidateQueries({ queryKey: ["owner", "stats"] });
+    client.invalidateQueries({ queryKey: ["orders"] });
+    client.invalidateQueries({ queryKey: ["order"] });
+  };
+  return {
+    advance: useMutation({ mutationFn: (id: string) => shopOwnerApi.advanceOrder(id), onSuccess: invalidate }),
+    cancel: useMutation({
+      mutationFn: (v: { id: string; reason: string }) => shopOwnerApi.cancelOrder(v.id, v.reason),
+      onSuccess: invalidate,
+    }),
+  };
+}
+
 
 export function useOwnerShops() {
   return useQuery({

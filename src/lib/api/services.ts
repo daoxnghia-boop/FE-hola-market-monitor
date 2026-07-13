@@ -3,8 +3,8 @@ import type {
   AddressDto, AdminAuditDto, AdminStatsDto, AdminUserSummaryDto,
   CartDto, CategoryDto, DeliveryZoneDto, NotificationDto, NotificationPageDto,
   OrderDetailDto, OrderSummaryDto, OtpChallengeDto, Paginated, ProductDto,
-  ReviewDto, SearchDto, SessionDto, ShopDto, ShopRegistrationInput,
-  UserDto, VerifyOtpResultDto, VoucherDto,
+  ProductInput, ReviewDto, SearchDto, SessionDto, ShopDto, ShopOwnerStatsDto,
+  ShopRegistrationInput, UserDto, VerifyOtpResultDto, VoucherDto,
 } from "./types";
 
 export const authApi = {
@@ -158,6 +158,7 @@ export const adminApi = {
 
 // ==================== SHOP OWNER ====================
 export const shopOwnerApi = {
+  stats: () => apiRequest<ShopOwnerStatsDto>("/shop-owner/stats"),
   shops: () => apiRequest<Paginated<ShopDto>>("/shop-owner/shops"),
   shop: (id: string) => apiRequest<ShopDto>(`/shop-owner/shops/${id}`),
   create: (body: ShopRegistrationInput) =>
@@ -167,4 +168,22 @@ export const shopOwnerApi = {
   remove: (id: string) => apiRequest<void>(`/shop-owner/shops/${id}`, { method: "DELETE" }),
   action: (id: string, action: "submit" | "pause" | "reopen") =>
     apiRequest<ShopDto>(`/shop-owner/shops/${id}/${action}`, { method: "POST", body: {} }),
+
+  products: (query: Record<string, unknown> = {}) =>
+    apiRequest<Paginated<ProductDto>>("/shop-owner/products", { query }),
+  product: (id: string) => apiRequest<ProductDto>(`/shop-owner/products/${id}`),
+  createProduct: (body: ProductInput) =>
+    apiRequest<ProductDto>("/shop-owner/products", { method: "POST", body }),
+  updateProduct: (id: string, body: Partial<ProductInput> & { available?: boolean }) =>
+    apiRequest<ProductDto>(`/shop-owner/products/${id}`, { method: "PATCH", body }),
+  removeProduct: (id: string) =>
+    apiRequest<void>(`/shop-owner/products/${id}`, { method: "DELETE" }),
+
+  orders: (query: Record<string, unknown> = {}) =>
+    apiRequest<Paginated<OrderSummaryDto>>("/shop-owner/orders", { query }),
+  order: (id: string) => apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}`),
+  advanceOrder: (id: string) =>
+    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/advance`, { method: "POST", body: {} }),
+  cancelOrder: (id: string, reason: string) =>
+    apiRequest<OrderDetailDto>(`/shop-owner/orders/${id}/cancel`, { method: "POST", body: { reason } }),
 };
