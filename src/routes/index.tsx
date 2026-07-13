@@ -1,16 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 import { MapPin, ChevronRight, TrendingUp, Sparkles, Bell, Heart, Repeat } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { SearchBar } from "@/components/search-bar";
 import { CategoryTabs } from "@/components/category-tabs";
 import { ShopCard } from "@/components/shop-card";
 import { ProductCard } from "@/components/product-card";
-import { ProductSheet } from "@/components/product-sheet";
 import { VoucherCard } from "@/components/voucher-card";
 import { BottomCartBar } from "@/components/bottom-cart-bar";
 import { ZonePicker } from "@/components/zone-picker";
-import type { ProductDto } from "@/lib/api/types";
 import {
   useFavoriteShops,
   useFrequentProducts,
@@ -53,12 +50,6 @@ function HomePage() {
   const favoriteShops = favoriteQuery.data ?? [];
   const vouchers = voucherQuery.data ?? [];
 
-  const [selected, setSelected] = useState<ProductDto | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const openProduct = (p: ProductDto) => {
-    setSelected(p);
-    setSheetOpen(true);
-  };
 
   return (
     <AppShell>
@@ -157,7 +148,8 @@ function HomePage() {
               <p className="text-sm text-muted-foreground">Đang tải gợi ý...</p>
             ) : (
               frequentProducts.map((p) => (
-                <ProductCard key={p.id} product={p} onSelect={openProduct} />
+                <ProductCard key={p.id} product={p} />
+
               ))
             )}
           </div>
@@ -187,7 +179,7 @@ function HomePage() {
           ) : popular.length === 0 ? (
             <p className="text-sm text-muted-foreground">Hiện chưa có món phổ biến.</p>
           ) : (
-            popular.map((p) => <ProductCard key={p.id} product={p} onSelect={openProduct} />)
+            popular.map((p) => <ProductCard key={p.id} product={p} />)
           )}
         </div>
       </section>
@@ -207,7 +199,6 @@ function HomePage() {
         </div>
       </section>
 
-      <ProductSheet product={selected} open={sheetOpen} onOpenChange={setSheetOpen} />
       <BottomCartBar />
     </AppShell>
   );

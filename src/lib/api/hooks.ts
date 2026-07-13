@@ -11,7 +11,14 @@ import {
   userApi,
   voucherApi,
 } from "./services";
-import type { CartDto, DeliveryZoneDto, ShopDto, ShopRegistrationInput, UserDto } from "./types";
+import type {
+  CartDto,
+  DeliveryZoneDto,
+  ProductReviewListParams,
+  ShopDto,
+  ShopRegistrationInput,
+  UserDto,
+} from "./types";
 
 export const queryKeys = {
   session: ["session"] as const,
@@ -22,6 +29,12 @@ export const queryKeys = {
   shopProducts: (id: string, params: unknown) => ["shop-products", id, params] as const,
   products: (params: unknown) => ["products", params] as const,
   popular: (zoneId?: string) => ["popular-products", zoneId] as const,
+  product: (id: string, zoneId?: string) => ["product", id, zoneId] as const,
+  productReviews: (id: string, params: ProductReviewListParams) =>
+    ["product", id, "reviews", params] as const,
+  productReviewSummary: (id: string) => ["product", id, "review-summary"] as const,
+  productRelated: (id: string, zoneId?: string) => ["product", id, "related", zoneId] as const,
+  productSameShop: (id: string, zoneId?: string) => ["product", id, "same-shop", zoneId] as const,
   search: (params: unknown) => ["search", params] as const,
   cart: ["cart"] as const,
   vouchers: (params: unknown) => ["vouchers", params] as const,
@@ -114,6 +127,74 @@ export function useProducts(params: Record<string, unknown> = {}) {
     queryKey: queryKeys.products(params),
     queryFn: () => catalogApi.products(params),
     select: (d) => d.items,
+  });
+}
+
+export function useProduct(productId: string, zoneId?: string) {
+  return useQuery({
+    queryKey: queryKeys.product(productId, zoneId),
+    queryFn: () => catalogApi.product(productId, zoneId),
+    enabled: Boolean(productId),
+    retry: false,
+  });
+}
+export function useProductReviews(
+  productId: string,
+  params: ProductReviewListParams = {},
+) {
+  return useQuery({
+    queryKey: queryKeys.productReviews(productId, params),
+    queryFn: () => catalogApi.productReviews(productId, params),
+    enabled: Boolean(productId),
+    retry: false,
+  });
+}
+export function useProductReviewSummary(productId: string) {
+  return useQuery({
+    queryKey: queryKeys.productReviewSummary(productId),
+    queryFn: () => catalogApi.productReviewSummary(productId),
+    enabled: Boolean(productId),
+    retry: false,
+  });
+}
+export function useRelatedProducts(productId: string, zoneId?: string, limit = 8) {
+  return useQuery({
+    queryKey: queryKeys.productRelated(productId, zoneId),
+    queryFn: () => catalogApi.relatedProducts(productId, { deliveryZoneId: zoneId, limit }),
+    select: (d) => d.items,
+    enabled: Boolean(productId),
+    retry: false,
+  });
+}
+export function useProductsFromSameShop(productId: string, zoneId?: string, limit = 8) {
+  return useQuery({
+    queryKey: queryKeys.productSameShop(productId, zoneId),
+    queryFn: () =>
+      catalogApi.productsFromSameShop(productId, { deliveryZoneId: zoneId, limit }),
+    select: (d) => d.items,
+    enabled: Boolean(productId),
+    retry: false,
+  });
+}
+export function useCreateProductReview() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      orderId: string;
+      productId: string;
+      rating: number;
+      comment?: string;
+      imageUrls?: string[];
+    }) =>
+      reviewApi.createProductReview(v.orderId, v.productId, {
+        rating: v.rating,
+        comment: v.comment,
+        imageUrls: v.imageUrls,
+      }),
+    onSuccess: (review) => {
+      client.invalidateQueries({ queryKey: ["product", review.productId] });
+      client.invalidateQueries({ queryKey: queryKeys.order(review.orderId) });
+    },
   });
 }
 export function usePopularProducts(zoneId?: string) {

@@ -1,5 +1,6 @@
 import { useRequireAuth } from "@/lib/require-auth";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ArrowLeft,
   Bike,
@@ -15,6 +16,7 @@ import { AppShell } from "@/components/app-shell";
 import { OrderStatusBadge } from "@/components/order-status-badge";
 import { OrderTimeline } from "@/components/order-timeline";
 import { Button } from "@/components/ui/button";
+import { WriteProductReviewDialog } from "@/components/write-product-review-dialog";
 import { formatDateTime, formatVND } from "@/lib/domain";
 import { useCancelOrder, useOrder, useReorder } from "@/lib/orders-store";
 import { apiErrorMessage } from "@/lib/api/client";
@@ -37,6 +39,9 @@ function OrderDetailPage() {
   const cancelOrder = useCancelOrder();
   const reorder = useReorder();
   const navigate = useNavigate();
+  const [reviewTarget, setReviewTarget] = useState<
+    { productId: string; productName: string } | null
+  >(null);
 
   if (isLoading)
     return (
@@ -133,25 +138,62 @@ function OrderDetailPage() {
           <section className="rounded-2xl bg-card p-4 shadow-card">
             <h2 className="mb-3 font-bold">Món đã đặt</h2>
             <div className="space-y-3">
-              {order.items.map((it) => (
-                <div key={it.productId} className="flex gap-3">
-                  <img
-                    src={it.productImageUrl}
-                    alt=""
-                    className="size-14 shrink-0 rounded-lg object-cover"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="line-clamp-1 font-semibold">{it.productName}</div>
-                    <div className="text-xs text-muted-foreground">x{it.quantity}</div>
-                    {it.note && (
-                      <div className="mt-0.5 line-clamp-1 text-[11px] italic text-muted-foreground">
-                        Ghi chú: {it.note}
-                      </div>
-                    )}
+              {order.items.map((it) => {
+                const reviewed = order.reviewedProductIds?.includes(it.productId) ?? false;
+                return (
+                  <div key={it.productId} className="flex gap-3">
+                    <Link
+                      to="/products/$productId"
+                      params={{ productId: it.productId }}
+                      className="shrink-0"
+                    >
+                      <img
+                        src={it.productImageUrl}
+                        alt=""
+                        className="size-14 rounded-lg object-cover"
+                      />
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to="/products/$productId"
+                        params={{ productId: it.productId }}
+                        className="line-clamp-1 font-semibold hover:underline"
+                      >
+                        {it.productName}
+                      </Link>
+                      <div className="text-xs text-muted-foreground">x{it.quantity}</div>
+                      {it.note && (
+                        <div className="mt-0.5 line-clamp-1 text-[11px] italic text-muted-foreground">
+                          Ghi chú: {it.note}
+                        </div>
+                      )}
+                      {isDone && (
+                        <div className="mt-1">
+                          {reviewed ? (
+                            <span className="text-[11px] font-medium text-success">
+                              ✓ Đã đánh giá món
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setReviewTarget({
+                                  productId: it.productId,
+                                  productName: it.productName,
+                                })
+                              }
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                            >
+                              <Star className="size-3" /> Đánh giá món
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="font-semibold">{formatVND(it.lineTotal)}</div>
                   </div>
-                  <div className="font-semibold">{formatVND(it.lineTotal)}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-4 space-y-1.5 border-t border-dashed pt-3 text-sm">
               <Row label="Tiền món" value={formatVND(order.pricing.subtotal)} />
@@ -261,6 +303,16 @@ function OrderDetailPage() {
           </div>
         </aside>
       </div>
+      {reviewTarget && (
+        <WriteProductReviewDialog
+          open={!!reviewTarget}
+          onOpenChange={(v) => !v && setReviewTarget(null)}
+          orderId={order.id}
+          productId={reviewTarget.productId}
+          productName={reviewTarget.productName}
+          onSuccess={() => setReviewTarget(null)}
+        />
+      )}
     </AppShell>
   );
 }

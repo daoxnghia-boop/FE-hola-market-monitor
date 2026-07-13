@@ -14,12 +14,10 @@ import {
 import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { ProductCard } from "@/components/product-card";
-import { ProductSheet } from "@/components/product-sheet";
 import { BottomCartBar } from "@/components/bottom-cart-bar";
 import { ZonePicker } from "@/components/zone-picker";
 import { RatingStars } from "@/components/rating-stars";
 import { formatVND } from "@/lib/domain";
-import type { ProductDto } from "@/lib/api/types";
 import { useCategories, useShop, useShopProducts } from "@/lib/api/hooks";
 import { apiErrorMessage } from "@/lib/api/client";
 import { useDeliveryZone } from "@/lib/cart-store";
@@ -51,8 +49,6 @@ function ShopDetailPage() {
   const categoriesQuery = useCategories();
   const fav = useIsFavorite(shopId);
   const favoriteAction = useFavoriteActions();
-  const [selected, setSelected] = useState<ProductDto | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const shop = shopQuery.data;
   const allProducts = productsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
@@ -80,10 +76,6 @@ function ShopDetailPage() {
     );
   const shopOpen = shop.status === "open" && shop.isOpen;
   const canOrder = shopOpen && supported;
-  const openProduct = (p: ProductDto) => {
-    setSelected(p);
-    setSheetOpen(true);
-  };
 
   const productDisabledLabel = !shopOpen
     ? shop.status === "out_of_menu"
@@ -269,7 +261,6 @@ function ShopDetailPage() {
               key={p.id}
               product={p}
               layout="row"
-              onSelect={openProduct}
               disabled={!canOrder}
               disabledLabel={productDisabledLabel}
             />
@@ -277,12 +268,6 @@ function ShopDetailPage() {
         )}
       </section>
 
-      <ProductSheet
-        product={selected}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        canOrder={canOrder}
-      />
       <BottomCartBar />
     </AppShell>
   );

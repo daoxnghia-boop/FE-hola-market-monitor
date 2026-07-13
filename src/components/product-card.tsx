@@ -1,51 +1,45 @@
+import { useState } from "react";
 import { Plus } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ProductImage } from "@/components/product-image";
+import { CartConflictDialog } from "@/components/cart-conflict-dialog";
 import { useAddCartItem } from "@/lib/api/hooks";
 import type { ProductDto } from "@/lib/api/types";
 import { ApiError, apiErrorMessage } from "@/lib/api/client";
 import { formatVND } from "@/lib/domain";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export function ProductCard({
   product,
   layout = "grid",
-  onSelect,
   disabled = false,
   disabledLabel,
 }: {
   product: ProductDto;
   layout?: "grid" | "row";
-  /** When provided, clicking the card or "+" calls this instead of adding directly. */
-  onSelect?: (p: ProductDto) => void;
   /** Force-disable adding (e.g. shop closed or zone not supported). */
   disabled?: boolean;
   disabledLabel?: string;
 }) {
   const addItem = useAddCartItem();
+  const [conflictOpen, setConflictOpen] = useState(false);
   const blocked = disabled || !product.available;
+  const overlayLabel = !product.available ? "Hết món" : disabledLabel;
 
-  const handleAdd = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    if (blocked) return;
-    if (onSelect) return onSelect(product);
+  const doAdd = (replaceExistingCart: boolean) => {
     addItem.mutate(
-      { productId: product.id, quantity: 1 },
+      { productId: product.id, quantity: 1, replaceExistingCart },
       {
         onSuccess: () => toast.success(`Đã thêm ${product.name} vào giỏ`),
         onError: (error) => {
           if (
+            !replaceExistingCart &&
             error instanceof ApiError &&
-            error.code === "CART_SHOP_CONFLICT" &&
-            window.confirm("Giỏ hiện có món của quán khác. Thay giỏ hàng hiện tại?")
+            error.code === "CART_SHOP_CONFLICT"
           ) {
-            addItem.mutate(
-              { productId: product.id, quantity: 1, replaceExistingCart: true },
-              {
-                onSuccess: () => toast.success(`Đã thêm ${product.name} vào giỏ`),
-                onError: (nextError) => toast.error(apiErrorMessage(nextError)),
-              },
-            );
+            setConflictOpen(true);
             return;
           }
           toast.error(apiErrorMessage(error));
@@ -54,96 +48,115 @@ export function ProductCard({
     );
   };
 
-  const handleCardClick = () => {
+  const handleAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (blocked) return;
-    if (onSelect) onSelect(product);
+    doAdd(false);
   };
 
-  const overlayLabel = !product.available ? "Hết món" : disabledLabel;
+  const linkProps = {
+    to: "/products/$productId" as const,
+    params: { productId: product.id },
+    "aria-label": product.name,
+  };
 
   if (layout === "row") {
     return (
       <div
-        onClick={handleCardClick}
-        role={onSelect ? "button" : undefined}
-        tabIndex={onSelect && !blocked ? 0 : -1}
         className={cn(
-          "flex gap-3 rounded-2xl bg-card p-3 shadow-card transition",
-          onSelect && !blocked && "cursor-pointer hover:shadow-pop",
+          "relative flex gap-3 rounded-2xl bg-card p-3 shadow-card transition",
+          !blocked && "hover:shadow-pop",
           blocked && "opacity-70",
         )}
       >
-        <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-muted">
-          <img
+        <Link
+          {...linkProps}
+          className="flex min-w-0 flex-1 gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-2xl"
+        >
+          <ProductImage
             src={product.imageUrl}
             alt={product.name}
-            loading="lazy"
-            className="size-full object-cover"
+            aspect="square"
+            rounded="rounded-xl"
+            overlayLabel={overlayLabel}
+            className="size-24 shrink-0"
           />
-          {overlayLabel && (
-            <div className="absolute inset-0 grid place-items-center bg-foreground/60 px-1 text-center text-[11px] font-semibold leading-tight text-background">
-              {overlayLabel}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <h4 className="line-clamp-1 font-semibold">{product.name}</h4>
+            <p className="line-clamp-2 text-xs text-muted-foreground">
+              {product.description}
+            </p>
+            <div className="mt-auto pt-2">
+              <span className="font-bold text-primary">{formatVND(product.price)}</span>
             </div>
-          )}
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <h4 className="line-clamp-1 font-semibold">{product.name}</h4>
-          <p className="line-clamp-2 text-xs text-muted-foreground">{product.description}</p>
-          <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-            <span className="font-bold text-primary">{formatVND(product.price)}</span>
-            <Button
-              size="icon"
-              onClick={handleAdd}
-              disabled={blocked}
-              className="rounded-full"
-              aria-label="Thêm vào giỏ"
-            >
-              <Plus />
-            </Button>
           </div>
+        </Link>
+        <div className="absolute bottom-3 right-3">
+          <Button
+            size="icon"
+            onClick={handleAdd}
+            disabled={blocked || addItem.isPending}
+            className="rounded-full"
+            aria-label={`Thêm ${product.name} vào giỏ`}
+          >
+            <Plus />
+          </Button>
         </div>
+        <CartConflictDialog
+          open={conflictOpen}
+          onOpenChange={setConflictOpen}
+          onConfirm={() => doAdd(true)}
+          productName={product.name}
+        />
       </div>
     );
   }
 
   return (
     <div
-      onClick={handleCardClick}
-      role={onSelect ? "button" : undefined}
-      tabIndex={onSelect && !blocked ? 0 : -1}
       className={cn(
-        "group overflow-hidden rounded-2xl bg-card shadow-card transition hover:-translate-y-0.5 hover:shadow-pop",
-        onSelect && !blocked && "cursor-pointer",
+        "group relative overflow-hidden rounded-2xl bg-card shadow-card transition hover:-translate-y-0.5 hover:shadow-pop",
         blocked && "opacity-70",
       )}
     >
-      <div className="relative aspect-square overflow-hidden bg-muted">
-        <img
+      <Link
+        {...linkProps}
+        className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-2xl"
+      >
+        <ProductImage
           src={product.imageUrl}
           alt={product.name}
-          loading="lazy"
-          className="size-full object-cover transition group-hover:scale-105"
+          aspect="4/3"
+          rounded="rounded-none"
+          overlayLabel={overlayLabel}
+          imageClassName="transition group-hover:scale-[1.03]"
         />
-        {overlayLabel && (
-          <div className="absolute inset-0 grid place-items-center bg-foreground/60 px-2 text-center text-sm font-semibold text-background">
-            {overlayLabel}
-          </div>
-        )}
-        <Button
-          size="icon"
-          onClick={handleAdd}
-          disabled={blocked}
-          className="absolute bottom-2 right-2 size-9 rounded-full shadow-pop"
-          aria-label="Thêm vào giỏ"
-        >
-          <Plus />
-        </Button>
-      </div>
-      <div className="space-y-1 p-3">
-        <h4 className="line-clamp-1 text-sm font-semibold">{product.name}</h4>
-        <p className="line-clamp-1 text-xs text-muted-foreground">Đã bán {product.soldCount}</p>
-        <div className="font-bold text-primary">{formatVND(product.price)}</div>
-      </div>
+        <div className="space-y-1 p-3">
+          <h4 className="line-clamp-2 text-sm font-semibold min-h-[2.5rem]">
+            {product.name}
+          </h4>
+          <p className="line-clamp-1 text-xs text-muted-foreground">
+            Đã bán {product.soldCount}
+          </p>
+          <div className="font-bold text-primary">{formatVND(product.price)}</div>
+        </div>
+      </Link>
+      <Button
+        size="icon"
+        onClick={handleAdd}
+        disabled={blocked || addItem.isPending}
+        className="absolute right-2 top-[calc(75%-0.5rem)] size-9 -translate-y-1/2 rounded-full shadow-pop"
+        aria-label={`Thêm ${product.name} vào giỏ`}
+      >
+        <Plus />
+      </Button>
+      <CartConflictDialog
+        open={conflictOpen}
+        onOpenChange={setConflictOpen}
+        onConfirm={() => doAdd(true)}
+        productName={product.name}
+      />
     </div>
   );
 }

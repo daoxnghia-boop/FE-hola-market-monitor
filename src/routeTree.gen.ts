@@ -27,6 +27,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ShopsShopIdRouteImport } from './routes/shops.$shopId'
 import { Route as ShopOwnerProductsRouteImport } from './routes/shop-owner.products'
 import { Route as ShopOwnerOrdersRouteImport } from './routes/shop-owner.orders'
+import { Route as ProductsProductIdRouteImport } from './routes/products.$productId'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
 import { Route as AdminVouchersRouteImport } from './routes/admin.vouchers'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
@@ -130,6 +131,11 @@ const ShopOwnerOrdersRoute = ShopOwnerOrdersRouteImport.update({
   path: '/orders',
   getParentRoute: () => ShopOwnerRoute,
 } as any)
+const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
+  id: '/products/$productId',
+  path: '/products/$productId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
   id: '/orders/$orderId',
   path: '/orders/$orderId',
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/shop-owner/orders': typeof ShopOwnerOrdersRouteWithChildren
   '/shop-owner/products': typeof ShopOwnerProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/shop-owner/orders': typeof ShopOwnerOrdersRouteWithChildren
   '/shop-owner/products': typeof ShopOwnerProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
@@ -275,6 +283,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/shop-owner/orders': typeof ShopOwnerOrdersRouteWithChildren
   '/shop-owner/products': typeof ShopOwnerProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vouchers'
     | '/orders/$orderId'
+    | '/products/$productId'
     | '/shop-owner/orders'
     | '/shop-owner/products'
     | '/shops/$shopId'
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vouchers'
     | '/orders/$orderId'
+    | '/products/$productId'
     | '/shop-owner/orders'
     | '/shop-owner/products'
     | '/shops/$shopId'
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vouchers'
     | '/orders/$orderId'
+    | '/products/$productId'
     | '/shop-owner/orders'
     | '/shop-owner/products'
     | '/shops/$shopId'
@@ -398,6 +410,7 @@ export interface RootRouteChildren {
   ShopOwnerRoute: typeof ShopOwnerRouteWithChildren
   VouchersRoute: typeof VouchersRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
+  ProductsProductIdRoute: typeof ProductsProductIdRoute
   ShopsShopIdRoute: typeof ShopsShopIdRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
 }
@@ -529,6 +542,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/shop-owner/orders'
       preLoaderRoute: typeof ShopOwnerOrdersRouteImport
       parentRoute: typeof ShopOwnerRoute
+    }
+    '/products/$productId': {
+      id: '/products/$productId'
+      path: '/products/$productId'
+      fullPath: '/products/$productId'
+      preLoaderRoute: typeof ProductsProductIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/orders/$orderId': {
       id: '/orders/$orderId'
@@ -699,6 +719,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShopOwnerRoute: ShopOwnerRouteWithChildren,
   VouchersRoute: VouchersRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
+  ProductsProductIdRoute: ProductsProductIdRoute,
   ShopsShopIdRoute: ShopsShopIdRoute,
   OrdersIndexRoute: OrdersIndexRoute,
 }
