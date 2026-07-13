@@ -21,8 +21,8 @@ export type DeliveryZoneDto = {
 };
 
 export type ShopStatus = "open" | "break" | "out_of_menu" | "closed";
-export type ShopApprovalStatus = "pending" | "approved" | "rejected";
-export type ShopOperationStatus = "active" | "suspended";
+export type ShopApprovalStatus = "pending" | "approved" | "rejected" | "draft";
+export type ShopOperationStatus = "active" | "suspended" | "paused";
 
 export type ShopDto = {
   id: string;
@@ -46,14 +46,36 @@ export type ShopDto = {
   supportedZoneIds: string[];
   isFavorite: boolean;
   delivery?: { supported: boolean; fee: number | null };
-  // admin fields
+  // admin / ownership fields
+  ownerId?: string;
   approvalStatus?: ShopApprovalStatus;
   operationStatus?: ShopOperationStatus;
   ownerName?: string;
   ownerPhone?: string;
   createdAt?: string;
   orderCount?: number;
+  rejectionReason?: string;
+  submittedAt?: string;
 };
+
+export type ShopRegistrationInput = {
+  name: string;
+  slug?: string;
+  ownerName: string;
+  ownerPhone: string;
+  phone: string;
+  address: string;
+  area: string;
+  description: string;
+  logoUrl?: string;
+  coverUrl?: string;
+  openHoursText: string;
+  prepTimeMinutes: number;
+  categoryIds: string[];
+  supportedZoneIds: string[];
+  acceptedTerms: boolean;
+};
+
 
 export type ProductDto = {
   id: string;

@@ -75,11 +75,22 @@ export function ProductSheet({
         }
       }}
     >
-      <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-3xl p-0">
+      <SheetContent
+        side="bottom"
+        className="max-h-[92dvh] overflow-y-auto rounded-t-3xl p-0 sm:mx-auto sm:max-w-lg"
+      >
         {product && (
           <>
-            <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
-              <img src={product.imageUrl} alt={product.name} className="size-full object-cover" />
+            <div className="relative h-[220px] w-full overflow-hidden bg-muted sm:h-[260px]">
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                loading="lazy"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
+                }}
+                className="size-full object-cover"
+              />
               {!product.available && (
                 <div className="absolute inset-0 grid place-items-center bg-foreground/60 text-base font-semibold text-background">
                   Hết món

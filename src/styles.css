@@ -138,4 +138,11 @@
     color: var(--color-foreground);
     -webkit-font-smoothing: antialiased;
   }
+  /* Neutralize Radix scroll-lock padding: html already reserves the gutter,
+     so body must not receive extra padding-right when overlays open. */
+  body[data-scroll-locked] {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
 }
+

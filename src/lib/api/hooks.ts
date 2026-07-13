@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   adminApi, authApi, cartApi, catalogApi, notificationApi,
-  orderApi, reviewApi, userApi, voucherApi,
+  orderApi, reviewApi, shopOwnerApi, userApi, voucherApi,
 } from "./services";
-import type { CartDto, DeliveryZoneDto, UserDto } from "./types";
+import type { CartDto, DeliveryZoneDto, ShopDto, ShopRegistrationInput, UserDto } from "./types";
 
 export const queryKeys = {
   session: ["session"] as const,
@@ -369,4 +369,59 @@ export function useAdminZoneMutations() {
 
 export function firstActiveZone(zones?: DeliveryZoneDto[]) {
   return zones?.find((zone) => zone.active) ?? null;
+}
+
+// ==================== SHOP OWNER HOOKS ====================
+export const ownerKeys = {
+  shops: ["owner", "shops"] as const,
+  shop: (id: string) => ["owner", "shop", id] as const,
+};
+
+export function useOwnerShops() {
+  return useQuery({
+    queryKey: ownerKeys.shops, queryFn: shopOwnerApi.shops,
+    select: (d) => d.items, retry: false,
+  });
+}
+export function useOwnerShop(id: string) {
+  return useQuery({
+    queryKey: ownerKeys.shop(id), queryFn: () => shopOwnerApi.shop(id),
+    enabled: Boolean(id), retry: false,
+  });
+}
+function invalidateOwnerAndCatalog(client: ReturnType<typeof useQueryClient>) {
+  client.invalidateQueries({ queryKey: ["owner"] });
+  client.invalidateQueries({ queryKey: ["shops"] });
+  client.invalidateQueries({ queryKey: ["shop"] });
+  client.invalidateQueries({ queryKey: ["admin", "shops"] });
+  client.invalidateQueries({ queryKey: ["session"] });
+}
+export function useCreateOwnerShop() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ShopRegistrationInput) => shopOwnerApi.create(body),
+    onSuccess: () => invalidateOwnerAndCatalog(client),
+  });
+}
+export function useUpdateOwnerShop() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; body: Partial<ShopDto> }) => shopOwnerApi.update(v.id, v.body),
+    onSuccess: () => invalidateOwnerAndCatalog(client),
+  });
+}
+export function useDeleteOwnerShop() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => shopOwnerApi.remove(id),
+    onSuccess: () => invalidateOwnerAndCatalog(client),
+  });
+}
+export function useOwnerShopAction() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { id: string; action: "submit" | "pause" | "reopen" }) =>
+      shopOwnerApi.action(v.id, v.action),
+    onSuccess: () => invalidateOwnerAndCatalog(client),
+  });
 }

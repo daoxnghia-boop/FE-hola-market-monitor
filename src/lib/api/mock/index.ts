@@ -13,7 +13,7 @@ import {
 
 type Ctx = { method: string; path: string; query: Record<string, string>; body: unknown };
 
-const STORAGE_KEY = "hola-mock-state-v2";
+const STORAGE_KEY = "hola-mock-state-v3";
 
 type OtpChallenge = { id: string; phone: string; otp: string; expiresAt: number };
 
@@ -114,6 +114,21 @@ function requireAdmin(): UserDto {
   const u = requireActiveUser();
   if (u.role !== "admin") forbidden("Chỉ dành cho quản trị viên.");
   return u;
+}
+function requireShopOwner(): UserDto {
+  const u = requireActiveUser();
+  const owns = state.shops.some((s) => s.ownerId === u.id);
+  if (u.role !== "shop_owner" && u.role !== "admin" && !owns) {
+    forbidden("Bạn chưa đăng ký gian hàng nào.");
+  }
+  return u;
+}
+function requireShopOwnership(shopId: string): { user: UserDto; shop: ShopDto } {
+  const u = requireActiveUser();
+  const shop = state.shops.find((s) => s.id === shopId);
+  if (!shop) notFound("Không tìm thấy quán.");
+  if (u.role !== "admin" && shop!.ownerId !== u.id) forbidden("Bạn không sở hữu quán này.");
+  return { user: u, shop: shop! };
 }
 
 function audit(action: string, entityType: string, entityId: string, reason?: string) {
@@ -328,7 +343,7 @@ async function route(ctx: Ctx): Promise<unknown> {
   if (M === "GET /delivery-zones") return ok({ items: state.zones.filter((z) => z.active) });
   if (M === "GET /shops") {
     let list = state.shops.filter(
-      (s) => s.approvalStatus === "approved" && s.operationStatus !== "suspended",
+      (s) => s.approvalStatus === "approved" && s.operationStatus === "active",
     );
     if (query.categoryId) list = list.filter((s) => s.categoryIds.includes(query.categoryId));
     if (query.deliveryZoneId) list = list.filter((s) => s.supportedZoneIds.includes(query.deliveryZoneId));
@@ -590,6 +605,107 @@ async function route(ctx: Ctx): Promise<unknown> {
     }
     save();
     return ok({ updatedCount: count, unreadCount: 0 });
+  }
+
+  // ============ SHOP OWNER ============
+  if (path === "/shop-owner/shops" || path.startsWith("/shop-owner/shops/")) {
+    const u = requireActiveUser();
+
+    if (M === "GET /shop-owner/shops") {
+      const list = state.shops.filter((s) => s.ownerId === u.id);
+      return ok({ items: list, nextCursor: null });
+    }
+
+    if (M === "POST /shop-owner/shops") {
+      const b = body as {
+        name: string; slug?: string; ownerName: string; ownerPhone: string; phone: string;
+        address: string; area: string; description: string; logoUrl?: string; coverUrl?: string;
+        openHoursText: string; prepTimeMinutes: number; categoryIds: string[]; supportedZoneIds: string[];
+        acceptedTerms: boolean;
+      };
+      if (!b?.acceptedTerms) badRequest("TERMS_REQUIRED", "Bạn cần đồng ý điều khoản.");
+      if (!b?.name?.trim()) badRequest("INVALID_NAME", "Vui lòng nhập tên quán.");
+      if (!isValidVNPhone(normalizePhone(b?.phone ?? ""))) badRequest("INVALID_PHONE", "SĐT liên hệ không hợp lệ.");
+      if (!b?.address?.trim()) badRequest("INVALID_ADDRESS", "Vui lòng nhập địa chỉ.");
+      if (!b?.categoryIds?.length) badRequest("CATEGORY_REQUIRED", "Chọn ít nhất 1 danh mục.");
+      if (!b?.supportedZoneIds?.length) badRequest("ZONE_REQUIRED", "Chọn ít nhất 1 khu vực giao.");
+      if (!(b?.prepTimeMinutes > 0)) badRequest("INVALID_PREP", "Thời gian chuẩn bị phải lớn hơn 0.");
+      const slugBase = (b.slug || b.name).toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      let slug = slugBase || `shop-${Date.now()}`;
+      let i = 1;
+      while (state.shops.some((s) => s.slug === slug)) { slug = `${slugBase}-${++i}`; }
+      const now = new Date().toISOString();
+      const shop: ShopDto = {
+        id: `s-${Date.now()}`, slug, name: b.name.trim(),
+        logoUrl: b.logoUrl || `https://picsum.photos/seed/${slug}-l/300/300`,
+        coverUrl: b.coverUrl || `https://picsum.photos/seed/${slug}-c/600/400`,
+        rating: 0, reviewCount: 0, address: b.address, area: b.area || "",
+        distanceKm: null, status: "closed", isOpen: false,
+        prepTimeMinutes: b.prepTimeMinutes, estimatedDeliveryMinutes: b.prepTimeMinutes + 15,
+        categoryIds: b.categoryIds, description: b.description || "",
+        phone: normalizePhone(b.phone), openHoursText: b.openHoursText || "08:00 – 20:00",
+        supportedZoneIds: b.supportedZoneIds, isFavorite: false,
+        ownerId: u.id, ownerName: b.ownerName || u.fullName,
+        ownerPhone: normalizePhone(b.ownerPhone || u.phone),
+        approvalStatus: "pending", operationStatus: "active",
+        createdAt: now, submittedAt: now, orderCount: 0,
+      };
+      state.shops = [shop, ...state.shops];
+      // Promote user to shop_owner on first registration
+      if (u.role === "customer") {
+        const idx = state.users.findIndex((x) => x.id === u.id);
+        if (idx >= 0) state.users[idx] = { ...state.users[idx], role: "shop_owner" };
+      }
+      // Notify admin dashboard via audit
+      audit("shop.register", "shop", shop.id);
+      save(); return ok(shop);
+    }
+
+    const ownerShopMatch = path.match(/^\/shop-owner\/shops\/([^/]+)$/);
+    if (ownerShopMatch) {
+      const { shop } = requireShopOwnership(ownerShopMatch[1]);
+      if (method === "GET") return ok(shop);
+      if (method === "PATCH") {
+        const b = body as Partial<ShopDto>;
+        // Prevent client from modifying protected admin fields
+        delete (b as Record<string, unknown>).approvalStatus;
+        delete (b as Record<string, unknown>).ownerId;
+        delete (b as Record<string, unknown>).rating;
+        delete (b as Record<string, unknown>).reviewCount;
+        delete (b as Record<string, unknown>).orderCount;
+        Object.assign(shop, b);
+        save(); return ok(shop);
+      }
+      if (method === "DELETE") {
+        const hasOrders = state.orders.some((o) => o.shopId === shop.id);
+        if (hasOrders) conflict("SHOP_HAS_ORDERS", "Quán đã có đơn hàng, không thể xoá vĩnh viễn. Hãy tạm ngưng thay vì xoá.");
+        if (shop.approvalStatus === "approved") conflict("SHOP_APPROVED", "Quán đã duyệt không thể xoá; hãy tạm ngưng.");
+        state.shops = state.shops.filter((s) => s.id !== shop.id);
+        save(); return ok(undefined);
+      }
+    }
+
+    const ownerActionMatch = path.match(/^\/shop-owner\/shops\/([^/]+)\/(submit|pause|reopen)$/);
+    if (ownerActionMatch && method === "POST") {
+      const { shop } = requireShopOwnership(ownerActionMatch[1]);
+      const action = ownerActionMatch[2];
+      const now = new Date().toISOString();
+      if (action === "submit") {
+        if (shop.approvalStatus === "approved") conflict("ALREADY_APPROVED", "Quán đã được duyệt.");
+        shop.approvalStatus = "pending";
+        shop.submittedAt = now;
+        shop.rejectionReason = undefined;
+      } else if (action === "pause") {
+        if (shop.approvalStatus !== "approved") conflict("NOT_APPROVED", "Chỉ quán đã duyệt mới tạm nghỉ được.");
+        shop.operationStatus = "paused";
+      } else if (action === "reopen") {
+        if (shop.operationStatus === "suspended") forbidden("Quán đang bị đình chỉ bởi quản trị viên.");
+        shop.operationStatus = "active";
+      }
+      save(); return ok(shop);
+    }
   }
 
   // ============ ADMIN ============
