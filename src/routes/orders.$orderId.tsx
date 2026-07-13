@@ -47,8 +47,8 @@ function OrderDetailPage() {
   if (isError || !order)
     return (
       <AppShell>
-        <div className="px-4 py-10 text-center text-sm text-destructive">
-          Không tìm thấy đơn hàng hoặc chưa thể kết nối máy chủ.
+        <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+          Hiện chưa có thông tin đơn hàng này.
         </div>
       </AppShell>
     );
