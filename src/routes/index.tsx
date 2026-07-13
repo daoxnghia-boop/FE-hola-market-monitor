@@ -134,18 +134,15 @@ function HomePage() {
       <section className="mt-8 px-4">
         <SectionHeader icon={<MapPin className="size-4" />} title="Quán gần bạn" to="/search" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {nearbyQuery.isLoading && (
+          {nearbyQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Đang tải quán gần bạn...</p>
+          ) : nearby.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Hiện chưa có quán quanh bạn.</p>
+          ) : (
+            nearby.map((s) => (
+              <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
+            ))
           )}
-          {nearbyQuery.isError && (
-            <p className="text-sm text-destructive">Chưa thể tải danh sách quán.</p>
-          )}
-          {!nearbyQuery.isLoading && !nearbyQuery.isError && nearby.length === 0 && (
-            <p className="text-sm text-muted-foreground">Chưa có quán giao tới khu này.</p>
-          )}
-          {nearby.map((s) => (
-            <ShopCard key={s.id} shop={s} supported={s.delivery?.supported ?? true} />
-          ))}
         </div>
       </section>
 
