@@ -2,7 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Search, MoreHorizontal } from "lucide-react";
-import { useAdminShops, useAdminShopAction } from "@/lib/api/hooks";
+import { useAdminShops, useAdminShopAction, useAdminUpdateShop } from "@/lib/api/hooks";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
