@@ -203,6 +203,27 @@ function shopDeliveryFee(shop: ShopDto, zone: DeliveryZoneDto | null | undefined
   return typeof override === "number" ? override : zone.baseDeliveryFee;
 }
 
+/**
+ * Only keeps fees for currently supported zones, clamps to non-negative integers.
+ * Zones without an explicit fee will fall back to zone.baseDeliveryFee at read time.
+ */
+function sanitizeDeliveryFees(
+  fees: Record<string, number> | undefined,
+  supportedZoneIds: string[],
+): Record<string, number> | undefined {
+  if (!fees) return undefined;
+  const out: Record<string, number> = {};
+  for (const id of supportedZoneIds) {
+    const raw = fees[id];
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      out[id] = Math.max(0, Math.floor(raw));
+    }
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+
+
 function decorateShop(s: ShopDto, zoneId?: string): ShopDto {
   const isFav = state.favoriteShopIds.includes(s.id);
   const zone = zoneId ? (state.zones.find((z) => z.id === zoneId) ?? null) : null;
