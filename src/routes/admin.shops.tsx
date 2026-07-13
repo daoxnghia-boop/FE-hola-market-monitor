@@ -117,10 +117,10 @@ function AdminShops() {
           address: form.address.trim(),
         },
       });
-      toast.success("Đã cập nhật quán.");
+      toast.success("Đã cập nhật quán", { description: form.name.trim() });
       setEditing(null);
     } catch (e) {
-      toast.error(apiErrorMessage(e));
+      toast.error("Cập nhật quán thất bại", { description: apiErrorMessage(e) });
     }
   };
 
