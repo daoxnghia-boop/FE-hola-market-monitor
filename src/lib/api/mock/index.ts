@@ -349,6 +349,82 @@ function recomputeProductAggregates(productId: string) {
   }
 }
 
+function computeReviewEligibility(
+  productId: string,
+): import("../types").ProductReviewEligibilityDto {
+  const user = currentUser();
+  if (!user) {
+    return {
+      authenticated: false,
+      eligible: false,
+      reason: "not_authenticated",
+      eligibleOrderItems: [],
+    };
+  }
+  const existing = state.productReviews.find(
+    (r) => r.productId === productId && r.user.id === user.id,
+  );
+  if (existing) {
+    return {
+      authenticated: true,
+      eligible: false,
+      reason: "already_reviewed",
+      eligibleOrderItems: [],
+      existingReview: existing,
+    };
+  }
+  const userOrders = state.orders.filter(
+    (o) => (o.customerId ?? null) === user.id,
+  );
+  const withProduct = userOrders.filter((o) =>
+    o.items.some((it) => it.productId === productId),
+  );
+  if (withProduct.length === 0) {
+    return {
+      authenticated: true,
+      eligible: false,
+      reason: "not_purchased",
+      eligibleOrderItems: [],
+    };
+  }
+  const completed = withProduct.filter((o) => o.status === "hoan_thanh");
+  const eligibleItems = completed
+    .filter(
+      (o) => !state.reviewedOrderItems.includes(`${o.id}:${productId}`),
+    )
+    .map((o) => ({
+      orderId: o.id,
+      orderCode: o.displayCode,
+      orderItemId: `${o.id}:${productId}`,
+      completedAt:
+        o.statusHistory.find((h) => h.status === "hoan_thanh")?.occurredAt ??
+        o.placedAt,
+    }));
+  if (eligibleItems.length === 0) {
+    // has purchase but no completed non-reviewed order
+    const pending = withProduct.find((o) => o.status !== "da_huy");
+    return {
+      authenticated: true,
+      eligible: false,
+      reason: "order_not_completed",
+      eligibleOrderItems: [],
+      pendingOrder: pending
+        ? {
+            orderId: pending.id,
+            orderCode: pending.displayCode,
+            status: pending.status,
+          }
+        : undefined,
+    };
+  }
+  return {
+    authenticated: true,
+    eligible: true,
+    reason: "eligible",
+    eligibleOrderItems: eligibleItems,
+  };
+}
+
 function sameShopProducts(current: ProductDto, limit: number): ProductDto[] {
   const shop = state.shops.find((s) => s.id === current.shopId);
   if (!shop) return [];
