@@ -1,16 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 import { MapPin, ChevronRight, TrendingUp, Sparkles, Bell, Heart, Repeat } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { SearchBar } from "@/components/search-bar";
 import { CategoryTabs } from "@/components/category-tabs";
 import { ShopCard } from "@/components/shop-card";
 import { ProductCard } from "@/components/product-card";
-import { ProductSheet } from "@/components/product-sheet";
 import { VoucherCard } from "@/components/voucher-card";
 import { BottomCartBar } from "@/components/bottom-cart-bar";
 import { ZonePicker } from "@/components/zone-picker";
-import type { ProductDto } from "@/lib/api/types";
 import {
   useFavoriteShops,
   useFrequentProducts,
