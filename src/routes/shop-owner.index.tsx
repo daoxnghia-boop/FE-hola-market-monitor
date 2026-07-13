@@ -1,177 +1,145 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { useState } from "react";
-import { Plus, Store, ArrowLeft, Pause, Play, Send, Trash2, Pencil } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Store, ShoppingBag, UtensilsCrossed, TrendingUp, Clock, Plus } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  useOwnerShops, useOwnerShopAction, useDeleteOwnerShop,
-} from "@/lib/api/hooks";
-import { useRequireAuth } from "@/lib/require-auth";
-import { apiErrorMessage } from "@/lib/api/client";
-import type { ShopDto } from "@/lib/api/types";
+import { useOwnerStats } from "@/lib/api/hooks";
+import { formatVND } from "@/lib/domain";
+import { OrderStatusBadge } from "@/components/order-status-badge";
 
 export const Route = createFileRoute("/shop-owner/")({
-  head: () => ({ meta: [{ title: "Quản lý gian hàng — HoLa Market" }] }),
-  component: ShopOwnerHome,
+  head: () => ({ meta: [{ title: "Tổng quan — HoLa Đối tác" }] }),
+  component: Dashboard,
 });
 
-const APPROVAL: Record<string, { label: string; tone: "default" | "secondary" | "destructive" | "outline" }> = {
-  approved: { label: "Đã duyệt", tone: "default" },
-  pending: { label: "Chờ duyệt", tone: "secondary" },
-  rejected: { label: "Từ chối", tone: "destructive" },
-  draft: { label: "Nháp", tone: "outline" },
-};
-const OPERATION: Record<string, { label: string; tone: "default" | "secondary" | "destructive" | "outline" }> = {
-  active: { label: "Hoạt động", tone: "outline" },
-  paused: { label: "Tạm nghỉ", tone: "secondary" },
-  suspended: { label: "Bị đình chỉ", tone: "destructive" },
-};
+function Dashboard() {
+  const stats = useOwnerStats();
 
-function ShopOwnerHome() {
-  useRequireAuth();
-  const shops = useOwnerShops();
-  const action = useOwnerShopAction();
-  const remove = useDeleteOwnerShop();
-  const navigate = useNavigate();
-  const [confirmDelete, setConfirmDelete] = useState<ShopDto | null>(null);
-
-  const doAction = async (id: string, act: "submit" | "pause" | "reopen") => {
-    try {
-      await action.mutateAsync({ id, action: act });
-      toast.success("Đã cập nhật.");
-    } catch (e) { toast.error(apiErrorMessage(e)); }
-  };
-
-  const doDelete = async () => {
-    if (!confirmDelete) return;
-    try {
-      await remove.mutateAsync(confirmDelete.id);
-      toast.success("Đã xoá quán.");
-    } catch (e) { toast.error(apiErrorMessage(e)); }
-    setConfirmDelete(null);
-  };
-
-  return (
-    <AppShell>
-      <div className="px-4 py-5">
-        <div className="mb-4 flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/account" })}>
-            <ArrowLeft className="size-5" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-xl font-extrabold">Gian hàng của tôi</h1>
-            <p className="text-xs text-muted-foreground">Quản lý các quán bạn đã đăng ký trên HoLa Market</p>
-          </div>
-          <Button asChild size="sm" className="rounded-full">
-            <Link to="/shop-owner/shops/new"><Plus className="size-4" /> Thêm</Link>
-          </Button>
+  if (stats.isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-2xl" />
+          ))}
         </div>
+        <Skeleton className="h-64 rounded-2xl" />
+      </div>
+    );
+  }
+  if (!stats.data) {
+    return (
+      <div className="rounded-2xl bg-card p-6 text-center shadow-card">
+        <p className="text-sm text-muted-foreground">Bạn chưa có gian hàng nào.</p>
+        <Button asChild className="mt-4 rounded-full">
+          <Link to="/shop-owner/shops/new">
+            <Plus className="size-4" /> Đăng ký gian hàng
+          </Link>
+        </Button>
+      </div>
+    );
+  }
 
-        {shops.isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
-          </div>
-        ) : !shops.data?.length ? (
-          <EmptyPromo />
-        ) : (
-          <div className="space-y-3">
-            {shops.data.map((s) => {
-              const ap = APPROVAL[s.approvalStatus ?? "pending"] ?? APPROVAL.pending;
-              const op = OPERATION[s.operationStatus ?? "active"] ?? OPERATION.active;
-              const canDelete = s.approvalStatus !== "approved";
-              return (
-                <div key={s.id} className="rounded-2xl bg-card p-4 shadow-card">
-                  <div className="flex items-start gap-3">
-                    <img src={s.logoUrl} alt={s.name} className="size-14 shrink-0 rounded-xl object-cover" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="truncate font-bold">{s.name}</span>
-                        <Badge variant={ap.tone}>{ap.label}</Badge>
-                        <Badge variant={op.tone}>{op.label}</Badge>
-                      </div>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">{s.address}</p>
-                      {s.approvalStatus === "rejected" && s.rejectionReason && (
-                        <p className="mt-1 text-xs text-destructive">Lý do từ chối: {s.rejectionReason}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button asChild variant="outline" size="sm">
-                      <Link to="/shop-owner/shops/$shopId/edit" params={{ shopId: s.id }}>
-                        <Pencil className="size-4" /> Sửa
-                      </Link>
-                    </Button>
-                    {s.approvalStatus === "approved" && s.operationStatus === "active" && (
-                      <Button variant="outline" size="sm" onClick={() => doAction(s.id, "pause")}>
-                        <Pause className="size-4" /> Tạm nghỉ
-                      </Button>
-                    )}
-                    {s.approvalStatus === "approved" && s.operationStatus === "paused" && (
-                      <Button variant="outline" size="sm" onClick={() => doAction(s.id, "reopen")}>
-                        <Play className="size-4" /> Mở lại
-                      </Button>
-                    )}
-                    {(s.approvalStatus === "rejected" || s.approvalStatus === "draft") && (
-                      <Button size="sm" onClick={() => doAction(s.id, "submit")}>
-                        <Send className="size-4" /> Gửi duyệt lại
-                      </Button>
-                    )}
-                    {canDelete && (
-                      <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(s)}>
-                        <Trash2 className="size-4" /> Xoá
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+  const s = stats.data;
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard
+          icon={<Store className="size-5" />}
+          label="Gian hàng"
+          value={s.totalShops}
+          hint={`${s.approvedShops} đã duyệt · ${s.pendingShops} chờ duyệt`}
+        />
+        <StatCard
+          icon={<UtensilsCrossed className="size-5" />}
+          label="Món đang bán"
+          value={s.activeProducts}
+        />
+        <StatCard
+          icon={<ShoppingBag className="size-5" />}
+          label="Đơn hôm nay"
+          value={s.ordersToday}
+          hint={`${s.pendingOrders} đơn cần xử lý`}
+        />
+        <StatCard
+          icon={<TrendingUp className="size-5" />}
+          label="Doanh thu hôm nay"
+          value={formatVND(s.revenueToday)}
+        />
       </div>
 
-      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xoá gian hàng?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Bạn có chắc muốn xoá <b>{confirmDelete?.name}</b>? Chỉ quán chưa được duyệt và chưa có đơn hàng
-              mới có thể xoá vĩnh viễn.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Huỷ</AlertDialogCancel>
-            <AlertDialogAction onClick={doDelete} disabled={remove.isPending}>
-              Xoá
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </AppShell>
+      <section className="rounded-2xl bg-card p-4 shadow-card">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-bold">Trạng thái đơn</h2>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/shop-owner/orders">Xem tất cả</Link>
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {s.ordersByStatus.map((x) => (
+            <Badge key={x.status} variant="outline" className="rounded-full px-3 py-1">
+              <OrderStatusBadge status={x.status} className="mr-1 !px-0 !py-0 !bg-transparent" />
+              <span className="ml-1 font-bold">{x.count}</span>
+            </Badge>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-card p-4 shadow-card">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-bold">Đơn gần đây</h2>
+          <Clock className="size-4 text-muted-foreground" />
+        </div>
+        {s.latestOrders.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Chưa có đơn nào.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {s.latestOrders.map((o) => (
+              <li key={o.id}>
+                <Link
+                  to="/shop-owner/orders/$orderId"
+                  params={{ orderId: o.id }}
+                  className="flex items-center justify-between gap-3 py-2.5 hover:bg-muted/30"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">
+                      #{o.displayCode} · {o.shopName}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">{o.itemSummary}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <OrderStatusBadge status={o.status} />
+                    <span className="text-sm font-bold text-primary">{formatVND(o.total)}</span>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   );
 }
 
-function EmptyPromo() {
+function StatCard({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+}) {
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-6 text-center shadow-card">
-      <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
-        <Store className="size-7" />
+    <div className="rounded-2xl bg-card p-4 shadow-card">
+      <div className="mb-2 grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+        {icon}
       </div>
-      <h2 className="mt-3 text-lg font-extrabold">Trở thành đối tác HoLa Market</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Đăng ký gian hàng để tiếp cận sinh viên, dân văn phòng quanh khu Hòa Lạc.
-        Hồ sơ sẽ được duyệt trong 1-2 ngày làm việc.
-      </p>
-      <Button asChild className="mt-4 rounded-full px-6">
-        <Link to="/shop-owner/shops/new"><Plus className="size-4" /> Đăng ký gian hàng</Link>
-      </Button>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-xl font-extrabold">{value}</div>
+      {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
     </div>
   );
 }

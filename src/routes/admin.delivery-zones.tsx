@@ -9,10 +9,20 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { apiErrorMessage } from "@/lib/api/client";
 import { formatVND } from "@/lib/domain";
@@ -34,26 +44,64 @@ function AdminZones() {
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">{zones.data?.length ?? 0} khu vực giao</div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="size-4" /> Thêm khu vực</Button></DialogTrigger>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="size-4" /> Thêm khu vực
+            </Button>
+          </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Thêm khu vực giao hàng</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Thêm khu vực giao hàng</DialogTitle>
+            </DialogHeader>
             <div className="space-y-3">
-              <div className="space-y-1"><Label>Tên đầy đủ</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-              <div className="space-y-1"><Label>Tên rút gọn</Label><Input value={shortName} onChange={(e) => setShortName(e.target.value)} /></div>
-              <div className="space-y-1"><Label>Phí giao (VND)</Label><Input type="number" min={0} value={fee} onChange={(e) => setFee(Math.max(0, Number(e.target.value)))} /></div>
+              <div className="space-y-1">
+                <Label>Tên đầy đủ</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Tên rút gọn</Label>
+                <Input value={shortName} onChange={(e) => setShortName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Phí giao (VND)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={fee}
+                  onChange={(e) => setFee(Math.max(0, Number(e.target.value)))}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button
                 onClick={async () => {
-                  if (!name.trim() || !shortName.trim()) { toast.error("Nhập đủ tên."); return; }
-                  if (fee < 0) { toast.error("Phí không được âm."); return; }
+                  if (!name.trim() || !shortName.trim()) {
+                    toast.error("Nhập đủ tên.");
+                    return;
+                  }
+                  if (fee < 0) {
+                    toast.error("Phí không được âm.");
+                    return;
+                  }
                   try {
-                    await create.mutateAsync({ name: name.trim(), shortName: shortName.trim(), baseDeliveryFee: fee });
-                    toast.success("Đã tạo khu vực."); setOpen(false); setName(""); setShortName(""); setFee(15000);
-                  } catch (e) { toast.error(apiErrorMessage(e)); }
+                    await create.mutateAsync({
+                      name: name.trim(),
+                      shortName: shortName.trim(),
+                      baseDeliveryFee: fee,
+                    });
+                    toast.success("Đã tạo khu vực.");
+                    setOpen(false);
+                    setName("");
+                    setShortName("");
+                    setFee(15000);
+                  } catch (e) {
+                    toast.error(apiErrorMessage(e));
+                  }
                 }}
                 disabled={create.isPending}
-              >Tạo</Button>
+              >
+                Tạo
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -61,7 +109,11 @@ function AdminZones() {
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         {zones.isLoading ? (
-          <div className="space-y-2 p-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-10" />
+            ))}
+          </div>
         ) : !zones.data?.length ? (
           <div className="p-8 text-center text-sm text-muted-foreground">Chưa có khu vực.</div>
         ) : (
@@ -87,7 +139,9 @@ function AdminZones() {
                         try {
                           await update.mutateAsync({ id: z.id, body: { active: v } });
                           toast.success("Đã cập nhật.");
-                        } catch (e) { toast.error(apiErrorMessage(e)); }
+                        } catch (e) {
+                          toast.error(apiErrorMessage(e));
+                        }
                       }}
                     />
                   </TableCell>

@@ -84,13 +84,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Đặt món từ các quán ăn local quanh Hòa Lạc nhanh gọn hơn cả nhắn tin Zalo. Tìm quán, đặt đơn, theo dõi trạng thái dễ dàng.",
       },
       { property: "og:title", content: "HoLa Market — Đặt món local quanh bạn" },
-      { property: "og:description", content: "Hòa Lạc Eats is a Vietnamese food ordering web app for convenient local food discovery and purchase." },
+      {
+        property: "og:description",
+        content:
+          "Hòa Lạc Eats is a Vietnamese food ordering web app for convenient local food discovery and purchase.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:title", content: "HoLa Market — Đặt món local quanh bạn" },
-      { name: "description", content: "Hòa Lạc Eats is a Vietnamese food ordering web app for convenient local food discovery and purchase." },
-      { name: "twitter:description", content: "Hòa Lạc Eats is a Vietnamese food ordering web app for convenient local food discovery and purchase." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6c3c18d9-6f51-4e5c-94e1-20d67c9483de/id-preview-a4efea38--9d32276a-81c4-404c-af5f-78e213f60a57.lovable.app-1781763410133.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6c3c18d9-6f51-4e5c-94e1-20d67c9483de/id-preview-a4efea38--9d32276a-81c4-404c-af5f-78e213f60a57.lovable.app-1781763410133.png" },
+      {
+        name: "description",
+        content:
+          "Hòa Lạc Eats is a Vietnamese food ordering web app for convenient local food discovery and purchase.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Hòa Lạc Eats is a Vietnamese food ordering web app for convenient local food discovery and purchase.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6c3c18d9-6f51-4e5c-94e1-20d67c9483de/id-preview-a4efea38--9d32276a-81c4-404c-af5f-78e213f60a57.lovable.app-1781763410133.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6c3c18d9-6f51-4e5c-94e1-20d67c9483de/id-preview-a4efea38--9d32276a-81c4-404c-af5f-78e213f60a57.lovable.app-1781763410133.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [

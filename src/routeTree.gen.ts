@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VouchersRouteImport } from './routes/vouchers'
+import { Route as ShopOwnerRouteImport } from './routes/shop-owner'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -24,6 +25,8 @@ import { Route as ShopOwnerIndexRouteImport } from './routes/shop-owner.index'
 import { Route as OrdersIndexRouteImport } from './routes/orders.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ShopsShopIdRouteImport } from './routes/shops.$shopId'
+import { Route as ShopOwnerProductsRouteImport } from './routes/shop-owner.products'
+import { Route as ShopOwnerOrdersRouteImport } from './routes/shop-owner.orders'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
 import { Route as AdminVouchersRouteImport } from './routes/admin.vouchers'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
@@ -31,13 +34,20 @@ import { Route as AdminShopsRouteImport } from './routes/admin.shops'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
 import { Route as AdminDeliveryZonesRouteImport } from './routes/admin.delivery-zones'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
+import { Route as ShopOwnerShopsIndexRouteImport } from './routes/shop-owner.shops.index'
 import { Route as ShopOwnerShopsNewRouteImport } from './routes/shop-owner.shops.new'
+import { Route as ShopOwnerOrdersOrderIdRouteImport } from './routes/shop-owner.orders.$orderId'
 import { Route as AdminOrdersOrderIdRouteImport } from './routes/admin.orders.$orderId'
 import { Route as ShopOwnerShopsShopIdEditRouteImport } from './routes/shop-owner.shops.$shopId.edit'
 
 const VouchersRoute = VouchersRouteImport.update({
   id: '/vouchers',
   path: '/vouchers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShopOwnerRoute = ShopOwnerRouteImport.update({
+  id: '/shop-owner',
+  path: '/shop-owner',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -91,9 +101,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopOwnerIndexRoute = ShopOwnerIndexRouteImport.update({
-  id: '/shop-owner/',
-  path: '/shop-owner/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShopOwnerRoute,
 } as any)
 const OrdersIndexRoute = OrdersIndexRouteImport.update({
   id: '/orders/',
@@ -109,6 +119,16 @@ const ShopsShopIdRoute = ShopsShopIdRouteImport.update({
   id: '/shops/$shopId',
   path: '/shops/$shopId',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ShopOwnerProductsRoute = ShopOwnerProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => ShopOwnerRoute,
+} as any)
+const ShopOwnerOrdersRoute = ShopOwnerOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => ShopOwnerRoute,
 } as any)
 const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
   id: '/orders/$orderId',
@@ -145,10 +165,20 @@ const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
   path: '/categories',
   getParentRoute: () => AdminRoute,
 } as any)
+const ShopOwnerShopsIndexRoute = ShopOwnerShopsIndexRouteImport.update({
+  id: '/shops/',
+  path: '/shops/',
+  getParentRoute: () => ShopOwnerRoute,
+} as any)
 const ShopOwnerShopsNewRoute = ShopOwnerShopsNewRouteImport.update({
-  id: '/shop-owner/shops/new',
-  path: '/shop-owner/shops/new',
-  getParentRoute: () => rootRouteImport,
+  id: '/shops/new',
+  path: '/shops/new',
+  getParentRoute: () => ShopOwnerRoute,
+} as any)
+const ShopOwnerOrdersOrderIdRoute = ShopOwnerOrdersOrderIdRouteImport.update({
+  id: '/$orderId',
+  path: '/$orderId',
+  getParentRoute: () => ShopOwnerOrdersRoute,
 } as any)
 const AdminOrdersOrderIdRoute = AdminOrdersOrderIdRouteImport.update({
   id: '/$orderId',
@@ -157,9 +187,9 @@ const AdminOrdersOrderIdRoute = AdminOrdersOrderIdRouteImport.update({
 } as any)
 const ShopOwnerShopsShopIdEditRoute =
   ShopOwnerShopsShopIdEditRouteImport.update({
-    id: '/shop-owner/shops/$shopId/edit',
-    path: '/shop-owner/shops/$shopId/edit',
-    getParentRoute: () => rootRouteImport,
+    id: '/shops/$shopId/edit',
+    path: '/shops/$shopId/edit',
+    getParentRoute: () => ShopOwnerRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -173,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof NotificationsRoute
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
+  '/shop-owner': typeof ShopOwnerRouteWithChildren
   '/vouchers': typeof VouchersRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/delivery-zones': typeof AdminDeliveryZonesRoute
@@ -181,12 +212,16 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/shop-owner/orders': typeof ShopOwnerOrdersRouteWithChildren
+  '/shop-owner/products': typeof ShopOwnerProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
   '/admin/': typeof AdminIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/shop-owner/': typeof ShopOwnerIndexRoute
   '/admin/orders/$orderId': typeof AdminOrdersOrderIdRoute
+  '/shop-owner/orders/$orderId': typeof ShopOwnerOrdersOrderIdRoute
   '/shop-owner/shops/new': typeof ShopOwnerShopsNewRoute
+  '/shop-owner/shops/': typeof ShopOwnerShopsIndexRoute
   '/shop-owner/shops/$shopId/edit': typeof ShopOwnerShopsShopIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -207,12 +242,16 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/shop-owner/orders': typeof ShopOwnerOrdersRouteWithChildren
+  '/shop-owner/products': typeof ShopOwnerProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
   '/admin': typeof AdminIndexRoute
   '/orders': typeof OrdersIndexRoute
   '/shop-owner': typeof ShopOwnerIndexRoute
   '/admin/orders/$orderId': typeof AdminOrdersOrderIdRoute
+  '/shop-owner/orders/$orderId': typeof ShopOwnerOrdersOrderIdRoute
   '/shop-owner/shops/new': typeof ShopOwnerShopsNewRoute
+  '/shop-owner/shops': typeof ShopOwnerShopsIndexRoute
   '/shop-owner/shops/$shopId/edit': typeof ShopOwnerShopsShopIdEditRoute
 }
 export interface FileRoutesById {
@@ -227,6 +266,7 @@ export interface FileRoutesById {
   '/notifications': typeof NotificationsRoute
   '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
+  '/shop-owner': typeof ShopOwnerRouteWithChildren
   '/vouchers': typeof VouchersRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/delivery-zones': typeof AdminDeliveryZonesRoute
@@ -235,12 +275,16 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/admin/vouchers': typeof AdminVouchersRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/shop-owner/orders': typeof ShopOwnerOrdersRouteWithChildren
+  '/shop-owner/products': typeof ShopOwnerProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
   '/admin/': typeof AdminIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/shop-owner/': typeof ShopOwnerIndexRoute
   '/admin/orders/$orderId': typeof AdminOrdersOrderIdRoute
+  '/shop-owner/orders/$orderId': typeof ShopOwnerOrdersOrderIdRoute
   '/shop-owner/shops/new': typeof ShopOwnerShopsNewRoute
+  '/shop-owner/shops/': typeof ShopOwnerShopsIndexRoute
   '/shop-owner/shops/$shopId/edit': typeof ShopOwnerShopsShopIdEditRoute
 }
 export interface FileRouteTypes {
@@ -256,6 +300,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/register'
     | '/search'
+    | '/shop-owner'
     | '/vouchers'
     | '/admin/categories'
     | '/admin/delivery-zones'
@@ -264,12 +309,16 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vouchers'
     | '/orders/$orderId'
+    | '/shop-owner/orders'
+    | '/shop-owner/products'
     | '/shops/$shopId'
     | '/admin/'
     | '/orders/'
     | '/shop-owner/'
     | '/admin/orders/$orderId'
+    | '/shop-owner/orders/$orderId'
     | '/shop-owner/shops/new'
+    | '/shop-owner/shops/'
     | '/shop-owner/shops/$shopId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -290,12 +339,16 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vouchers'
     | '/orders/$orderId'
+    | '/shop-owner/orders'
+    | '/shop-owner/products'
     | '/shops/$shopId'
     | '/admin'
     | '/orders'
     | '/shop-owner'
     | '/admin/orders/$orderId'
+    | '/shop-owner/orders/$orderId'
     | '/shop-owner/shops/new'
+    | '/shop-owner/shops'
     | '/shop-owner/shops/$shopId/edit'
   id:
     | '__root__'
@@ -309,6 +362,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/register'
     | '/search'
+    | '/shop-owner'
     | '/vouchers'
     | '/admin/categories'
     | '/admin/delivery-zones'
@@ -317,12 +371,16 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/vouchers'
     | '/orders/$orderId'
+    | '/shop-owner/orders'
+    | '/shop-owner/products'
     | '/shops/$shopId'
     | '/admin/'
     | '/orders/'
     | '/shop-owner/'
     | '/admin/orders/$orderId'
+    | '/shop-owner/orders/$orderId'
     | '/shop-owner/shops/new'
+    | '/shop-owner/shops/'
     | '/shop-owner/shops/$shopId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -337,13 +395,11 @@ export interface RootRouteChildren {
   NotificationsRoute: typeof NotificationsRoute
   RegisterRoute: typeof RegisterRoute
   SearchRoute: typeof SearchRoute
+  ShopOwnerRoute: typeof ShopOwnerRouteWithChildren
   VouchersRoute: typeof VouchersRoute
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   ShopsShopIdRoute: typeof ShopsShopIdRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
-  ShopOwnerIndexRoute: typeof ShopOwnerIndexRoute
-  ShopOwnerShopsNewRoute: typeof ShopOwnerShopsNewRoute
-  ShopOwnerShopsShopIdEditRoute: typeof ShopOwnerShopsShopIdEditRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -353,6 +409,13 @@ declare module '@tanstack/react-router' {
       path: '/vouchers'
       fullPath: '/vouchers'
       preLoaderRoute: typeof VouchersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shop-owner': {
+      id: '/shop-owner'
+      path: '/shop-owner'
+      fullPath: '/shop-owner'
+      preLoaderRoute: typeof ShopOwnerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -427,10 +490,10 @@ declare module '@tanstack/react-router' {
     }
     '/shop-owner/': {
       id: '/shop-owner/'
-      path: '/shop-owner'
+      path: '/'
       fullPath: '/shop-owner/'
       preLoaderRoute: typeof ShopOwnerIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ShopOwnerRoute
     }
     '/orders/': {
       id: '/orders/'
@@ -452,6 +515,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/shops/$shopId'
       preLoaderRoute: typeof ShopsShopIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/shop-owner/products': {
+      id: '/shop-owner/products'
+      path: '/products'
+      fullPath: '/shop-owner/products'
+      preLoaderRoute: typeof ShopOwnerProductsRouteImport
+      parentRoute: typeof ShopOwnerRoute
+    }
+    '/shop-owner/orders': {
+      id: '/shop-owner/orders'
+      path: '/orders'
+      fullPath: '/shop-owner/orders'
+      preLoaderRoute: typeof ShopOwnerOrdersRouteImport
+      parentRoute: typeof ShopOwnerRoute
     }
     '/orders/$orderId': {
       id: '/orders/$orderId'
@@ -502,12 +579,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCategoriesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/shop-owner/shops/': {
+      id: '/shop-owner/shops/'
+      path: '/shops'
+      fullPath: '/shop-owner/shops/'
+      preLoaderRoute: typeof ShopOwnerShopsIndexRouteImport
+      parentRoute: typeof ShopOwnerRoute
+    }
     '/shop-owner/shops/new': {
       id: '/shop-owner/shops/new'
-      path: '/shop-owner/shops/new'
+      path: '/shops/new'
       fullPath: '/shop-owner/shops/new'
       preLoaderRoute: typeof ShopOwnerShopsNewRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ShopOwnerRoute
+    }
+    '/shop-owner/orders/$orderId': {
+      id: '/shop-owner/orders/$orderId'
+      path: '/$orderId'
+      fullPath: '/shop-owner/orders/$orderId'
+      preLoaderRoute: typeof ShopOwnerOrdersOrderIdRouteImport
+      parentRoute: typeof ShopOwnerOrdersRoute
     }
     '/admin/orders/$orderId': {
       id: '/admin/orders/$orderId'
@@ -518,10 +609,10 @@ declare module '@tanstack/react-router' {
     }
     '/shop-owner/shops/$shopId/edit': {
       id: '/shop-owner/shops/$shopId/edit'
-      path: '/shop-owner/shops/$shopId/edit'
+      path: '/shops/$shopId/edit'
       fullPath: '/shop-owner/shops/$shopId/edit'
       preLoaderRoute: typeof ShopOwnerShopsShopIdEditRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ShopOwnerRoute
     }
   }
 }
@@ -560,6 +651,40 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface ShopOwnerOrdersRouteChildren {
+  ShopOwnerOrdersOrderIdRoute: typeof ShopOwnerOrdersOrderIdRoute
+}
+
+const ShopOwnerOrdersRouteChildren: ShopOwnerOrdersRouteChildren = {
+  ShopOwnerOrdersOrderIdRoute: ShopOwnerOrdersOrderIdRoute,
+}
+
+const ShopOwnerOrdersRouteWithChildren = ShopOwnerOrdersRoute._addFileChildren(
+  ShopOwnerOrdersRouteChildren,
+)
+
+interface ShopOwnerRouteChildren {
+  ShopOwnerOrdersRoute: typeof ShopOwnerOrdersRouteWithChildren
+  ShopOwnerProductsRoute: typeof ShopOwnerProductsRoute
+  ShopOwnerIndexRoute: typeof ShopOwnerIndexRoute
+  ShopOwnerShopsNewRoute: typeof ShopOwnerShopsNewRoute
+  ShopOwnerShopsIndexRoute: typeof ShopOwnerShopsIndexRoute
+  ShopOwnerShopsShopIdEditRoute: typeof ShopOwnerShopsShopIdEditRoute
+}
+
+const ShopOwnerRouteChildren: ShopOwnerRouteChildren = {
+  ShopOwnerOrdersRoute: ShopOwnerOrdersRouteWithChildren,
+  ShopOwnerProductsRoute: ShopOwnerProductsRoute,
+  ShopOwnerIndexRoute: ShopOwnerIndexRoute,
+  ShopOwnerShopsNewRoute: ShopOwnerShopsNewRoute,
+  ShopOwnerShopsIndexRoute: ShopOwnerShopsIndexRoute,
+  ShopOwnerShopsShopIdEditRoute: ShopOwnerShopsShopIdEditRoute,
+}
+
+const ShopOwnerRouteWithChildren = ShopOwnerRoute._addFileChildren(
+  ShopOwnerRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
@@ -571,13 +696,11 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsRoute: NotificationsRoute,
   RegisterRoute: RegisterRoute,
   SearchRoute: SearchRoute,
+  ShopOwnerRoute: ShopOwnerRouteWithChildren,
   VouchersRoute: VouchersRoute,
   OrdersOrderIdRoute: OrdersOrderIdRoute,
   ShopsShopIdRoute: ShopsShopIdRoute,
   OrdersIndexRoute: OrdersIndexRoute,
-  ShopOwnerIndexRoute: ShopOwnerIndexRoute,
-  ShopOwnerShopsNewRoute: ShopOwnerShopsNewRoute,
-  ShopOwnerShopsShopIdEditRoute: ShopOwnerShopsShopIdEditRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -3,11 +3,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   Store,
+  UtensilsCrossed,
   ShoppingBag,
-  Users,
-  Ticket,
-  Tag,
-  MapPin,
   Menu,
   LogOut,
   ArrowLeft,
@@ -31,16 +28,13 @@ import { toast } from "sonner";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
 const NAV: NavItem[] = [
-  { to: "/admin", label: "Tổng quan", icon: LayoutDashboard, exact: true },
-  { to: "/admin/shops", label: "Cửa hàng", icon: Store },
-  { to: "/admin/orders", label: "Đơn hàng", icon: ShoppingBag },
-  { to: "/admin/users", label: "Người dùng", icon: Users },
-  { to: "/admin/vouchers", label: "Voucher", icon: Ticket },
-  { to: "/admin/categories", label: "Danh mục", icon: Tag },
-  { to: "/admin/delivery-zones", label: "Khu vực giao", icon: MapPin },
+  { to: "/shop-owner", label: "Tổng quan", icon: LayoutDashboard, exact: true },
+  { to: "/shop-owner/shops", label: "Gian hàng", icon: Store },
+  { to: "/shop-owner/products", label: "Món ăn", icon: UtensilsCrossed },
+  { to: "/shop-owner/orders", label: "Đơn hàng", icon: ShoppingBag },
 ];
 
-export function AdminGuard({ children }: { children: ReactNode }) {
+function ShopOwnerGuard({ children }: { children: ReactNode }) {
   const session = useSession();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -56,37 +50,31 @@ export function AdminGuard({ children }: { children: ReactNode }) {
     if (user.status === "blocked") {
       toast.error("Tài khoản của bạn đã bị khóa.");
       navigate({ to: "/forbidden", replace: true });
-      return;
-    }
-    if (user.role !== "admin") {
-      navigate({ to: "/forbidden", replace: true });
     }
   }, [session.isLoading, session.data, navigate, pathname]);
 
-  if (session.isLoading || !session.data?.user || session.data.user.role !== "admin") {
+  if (session.isLoading || !session.data?.user) {
     return (
       <div className="grid min-h-screen place-items-center bg-muted/30">
-        <div className="text-sm text-muted-foreground">Đang kiểm tra quyền truy cập…</div>
+        <div className="text-sm text-muted-foreground">Đang tải…</div>
       </div>
     );
   }
   return <>{children}</>;
 }
 
-export function AdminShell() {
+export function ShopOwnerShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const current = NAV.find((n) => (n.exact ? pathname === n.to : pathname.startsWith(n.to)));
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <AdminGuard>
+    <ShopOwnerGuard>
       <div className="flex min-h-screen bg-muted/30">
-        {/* Sidebar (desktop) */}
         <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:block">
           <SidebarInner />
         </aside>
 
-        {/* Main */}
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-card px-4">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -97,7 +85,7 @@ export function AdminShell() {
               </SheetTrigger>
               <SheetContent side="left" className="w-72 p-0">
                 <div className="flex h-14 items-center justify-between border-b border-border px-4">
-                  <span className="font-bold">HoLa Admin</span>
+                  <span className="font-bold">HoLa Đối tác</span>
                   <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)}>
                     <X className="size-4" />
                   </Button>
@@ -105,14 +93,14 @@ export function AdminShell() {
                 <SidebarInner onNavigate={() => setMobileOpen(false)} />
               </SheetContent>
             </Sheet>
-            <h1 className="text-base font-bold sm:text-lg">{current?.label ?? "Trang quản trị"}</h1>
+            <h1 className="text-base font-bold sm:text-lg">{current?.label ?? "Đối tác HoLa"}</h1>
             <div className="ml-auto flex items-center gap-2">
               <Button asChild variant="ghost" size="sm">
                 <Link to="/">
                   <ArrowLeft className="size-4" /> Về app
                 </Link>
               </Button>
-              <AdminUserMenu />
+              <OwnerMenu />
             </div>
           </header>
 
@@ -121,7 +109,7 @@ export function AdminShell() {
           </main>
         </div>
       </div>
-    </AdminGuard>
+    </ShopOwnerGuard>
   );
 }
 
@@ -133,7 +121,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
         <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
           🍜
         </span>
-        <span className="font-bold">HoLa Admin</span>
+        <span className="font-bold">HoLa Đối tác</span>
       </div>
       <nav className="flex-1 space-y-0.5 p-2">
         {NAV.map((n) => {
@@ -161,7 +149,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function AdminUserMenu() {
+function OwnerMenu() {
   const session = useSession();
   const logout = useLogout();
   const navigate = useNavigate();
@@ -172,7 +160,7 @@ function AdminUserMenu() {
       .map((s) => s[0])
       .slice(-2)
       .join("")
-      .toUpperCase() || "AD";
+      .toUpperCase() || "SO";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
