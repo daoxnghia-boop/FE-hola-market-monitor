@@ -78,6 +78,63 @@ function AccountPage() {
           </Link>
         )}
 
+        {authed && (
+          <section className="mt-4 space-y-2 rounded-2xl bg-card p-4 shadow-card">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <Store className="size-5" />
+                </span>
+                <div>
+                  <div className="font-bold">Đăng ký gian hàng</div>
+                  <div className="text-xs text-muted-foreground">
+                    Bán món ăn của bạn trên HoLa Market
+                  </div>
+                </div>
+              </div>
+              <Button asChild size="sm" variant="outline" className="rounded-full">
+                <Link to="/shop-owner">Quản lý</Link>
+              </Button>
+            </div>
+
+            {ownerShops.isLoading ? (
+              <Skeleton className="mt-2 h-16" />
+            ) : shops.length === 0 ? (
+              <div className="mt-2 rounded-xl bg-primary/5 p-3">
+                <p className="text-sm">
+                  Bạn chưa có gian hàng nào. Đăng ký ngay để tiếp cận sinh viên & dân văn phòng
+                  khu Hòa Lạc.
+                </p>
+                <Button asChild className="mt-2 rounded-full" size="sm">
+                  <Link to="/shop-owner/shops/new"><Plus className="size-4" /> Đăng ký gian hàng</Link>
+                </Button>
+              </div>
+            ) : (
+              <ul className="mt-2 divide-y divide-border overflow-hidden rounded-xl border border-border">
+                {shops.map((s) => (
+                  <li key={s.id}>
+                    <Link to="/shop-owner/shops/$shopId/edit" params={{ shopId: s.id }}
+                      className="flex items-center gap-3 p-3 hover:bg-accent/40">
+                      <img src={s.logoUrl} alt={s.name} className="size-10 shrink-0 rounded-lg object-cover" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold">{s.name}</div>
+                        <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+                          <span className="capitalize">{s.approvalStatus}</span>
+                          <span>·</span>
+                          <span>{s.operationStatus}</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+
+
         <div className="mt-4 grid gap-2">
           <Tile to="/orders" icon={<Receipt className="size-5" />} label="Đơn của tôi" />
           <Tile to="/vouchers" icon={<Ticket className="size-5" />} label="Ưu đãi" />
