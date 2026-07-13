@@ -37,11 +37,11 @@ const schema = z.object({
   shopId: z.string().min(1, "Chọn quán"),
   name: z.string().trim().min(2, "Tối thiểu 2 ký tự").max(120),
   price: z.coerce.number().int().min(1000, "Tối thiểu 1.000đ"),
-  description: z.string().max(400).optional().default(""),
-  imageUrl: z.string().trim().url("URL không hợp lệ").or(z.literal("")).optional().default(""),
+  description: z.string().max(400),
+  imageUrl: z.string().trim().refine((v) => v === "" || /^https?:\/\//.test(v), "URL không hợp lệ"),
   categoryId: z.string().min(1, "Chọn danh mục"),
-  prepTimeMinutes: z.coerce.number().int().min(1).max(180).default(10),
-  available: z.boolean().default(true),
+  prepTimeMinutes: z.coerce.number().int().min(1).max(180),
+  available: z.boolean(),
 });
 type FormValues = z.infer<typeof schema>;
 
