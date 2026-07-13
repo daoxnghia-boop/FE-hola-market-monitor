@@ -71,7 +71,7 @@ function AdminOrderDetail() {
 
       <Card className="p-4">
         <h2 className="mb-3 text-sm font-bold">Lịch sử trạng thái</h2>
-        <OrderTimeline history={o.statusHistory} />
+        <OrderTimeline current={o.status} history={o.statusHistory} />
       </Card>
     </div>
   );
