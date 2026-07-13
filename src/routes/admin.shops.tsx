@@ -318,6 +318,65 @@ function AdminShops() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa thông tin quán</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Tên quán</Label>
+              <input
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Khu vực</Label>
+              <input
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.area}
+                onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Địa chỉ</Label>
+              <input
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.address}
+                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Mô tả</Label>
+              <Textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              className="rounded-md border border-input bg-background px-4 py-2 text-sm"
+              onClick={() => setEditing(null)}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
+              onClick={saveEdit}
+              disabled={updateShop.isPending}
+            >
+              Lưu
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
